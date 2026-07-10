@@ -771,7 +771,19 @@
         atualizarBotoesVisuais();
         atualizarTela();
         atualizarPainelSolus();
-        atualizarIndicadorSP((estaDentroDoSharePoint() || (GS_CONFIG.ativo && GS_CONFIG.webAppUrl)) ? 'ok' : 'offline');
+
+        if (GS_CONFIG.ativo && GS_CONFIG.webAppUrl) {
+            // Traz o que já estiver salvo na planilha para HOJE também (ex: lançado por outro
+            // computador, ou em uma sessão anterior neste mesmo dia). Antes, isso só acontecia
+            // ao trocar para uma data passada — no dia de hoje o app ficava só com o que ele
+            // mesmo detectasse nas pastas conectadas nesta sessão.
+            await carregarDadosRemotosPorData(getDataSelecionada());
+            atualizarTela();
+            atualizarPainelSolus();
+        } else {
+            atualizarIndicadorSP(estaDentroDoSharePoint() ? 'ok' : 'offline');
+        }
+
         await restaurarConexoesSalvas();
     }
 
@@ -821,23 +833,19 @@
         processarForcado();
     }
 
-    // Disparado quando o usuário troca a data no calendário.
-    // Hoje: monitora as pastas ao vivo normalmente.
-    // Data passada: primeiro traz o que está salvo no Google Sheets (útil se este navegador
-    // nunca processou aquele dia), depois deixa o processar() atualizar Asten/Solus (que são
-    // sempre lidos por data, independente de ser hoje ou não).
+    // Disparado quando o usuário troca a data no calendário. Busca sempre o que já está salvo
+    // no Google Sheets para a data escolhida (inclusive hoje, ex: lançamentos feitos por outro
+    // computador) — o merge nunca sobrescreve o que este navegador já está monitorando ao vivo
+    // (ver "existente.aoVivo" em carregarDadosRemotosPorData). Depois, processar() atualiza
+    // Asten/Solus/pastas normalmente.
     async function aoTrocarData() {
         atualizarTela();
         atualizarPainelSolus();
 
-        const hojeIso = getHojeISO();
-        const dataSelecionadaIso = document.getElementById('data-historico').value;
+        await carregarDadosRemotosPorData(getDataSelecionada());
+        atualizarTela();
+        atualizarPainelSolus();
 
-        if (dataSelecionadaIso !== hojeIso) {
-            await carregarDadosRemotosPorData(getDataSelecionada());
-            atualizarTela();
-            atualizarPainelSolus();
-        }
         processarForcado();
     }
 
