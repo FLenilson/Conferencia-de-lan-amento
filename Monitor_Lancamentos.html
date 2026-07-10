@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Monitor de Lançamentos - Pro v18.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #1b5e20; --secondary: #37474f; --bg: #f0f4f3; --white: #ffffff;
+            --prod-color: #01579b; --prod-bg: #e3f2fd;
+            --serv-color: #1b5e20; --serv-bg: #e8f5e9;
+            --juri-color: #4527a0; --juri-bg: #f3e5f5;
+            --assi-color: #e65100; --assi-bg: #fff3e0;
+            --outro-color: #546e7a; --outro-bg: #eceff1;
+            --direto-color: #546e7a; --direto-bg: #eceff1;
+            --pending-bg: #fff3e0; --pending-text: #ef6c00;
+            --success-bg: #e8f5e9; --success-text: #2e7d32;
+            --solus-alerta-bg: #fff8e1; --solus-alerta-text: #f57f17;
+            --solus-erro-bg: #ffebee; --solus-erro-text: #c62828;
+        }
+
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; color: #2c3e50; padding-bottom: 40px; overflow-x: hidden; }
+        .nav { background: var(--white); padding: 10px 20px; border-bottom: 1px solid #e0e6ed; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; position: sticky; top: 0; z-index: 1000; }
+        .brand { font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 1rem; color: var(--primary); text-transform: uppercase; flex-shrink: 0; white-space: nowrap; }
+        .widgets-top { display: flex; flex-wrap: wrap; gap: 10px 15px; flex-grow: 1; justify-content: center; font-size: 0.65rem; font-weight: 700; color: #64748b; min-width: 0; }
+        .widget-item { border-right: 1px solid #eee; padding-right: 12px; white-space: nowrap; }
+        .widget-item span { color: var(--primary); }
+        .status-pill { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; font-weight: 700; color: #7f8c8d; padding: 3px 10px; border-radius: 20px; background: #f1f3f5; min-width: 100px; justify-content: center; flex-shrink: 0; white-space: nowrap; }
+
+        .dot { width: 6px; height: 6px; border-radius: 50%; background: #ced4da; transition: 0.3s; }
+        .dot-active { background: #4caf50; animation: pulse 1.5s infinite; }
+        .dot-warning { background: #ff9800; animation: pulse-warn 1.5s infinite; }
+        .dot-error { background: #f44336; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); } 100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); } }
+        @keyframes pulse-warn { 0% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(255, 152, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0); } }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.5); } 70% { box-shadow: 0 0 0 6px rgba(198, 40, 40, 0); } 100% { box-shadow: 0 0 0 0 rgba(198, 40, 40, 0); } }
+
+        .container { padding: 12px 30px; max-width: 1400px; margin: auto; }
+        .grid-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 6px; }
+        .card { background: var(--white); padding: 7px 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); border-top: 3px solid var(--primary); text-align: center; }
+        .card-label { font-size: 0.6rem; font-weight: 700; color: #7f8c8d; text-transform: uppercase; }
+        .card-val { font-family: 'Poppins', sans-serif; font-size: 1.4rem; font-weight: 800; }
+
+        .equipe-stats { display: flex; gap: 6px; justify-content: center; margin-bottom: 6px; flex-wrap: wrap; }
+        .equipe-card { background: var(--white); padding: 4px 12px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.68rem; font-weight: 700; color: #64748b; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .equipe-card span { font-family: 'Poppins', sans-serif; font-size: 0.95rem; color: #8e44ad; }
+
+        .toolbar { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(5px); padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #e0e6ed; position: sticky; top: 52px; z-index: 900; }
+        .toolbar-top { display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 6px;}
+        .conexao-bar { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 6px 8px; border-radius: 6px; border: 1px solid #f1f5f9; justify-content: center;}
+
+        .btn { padding: 6px 13px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.73rem; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-outline { border: 1px solid #dfe6e9; background: var(--white); color: var(--secondary); }
+
+        .btn-conn { padding: 5px 12px; border-radius: 16px; font-weight: 700; font-size: 0.68rem; cursor: pointer; border: 1px solid #cbd5e1; background: #f1f5f9; color: #64748b; transition: 0.3s; }
+        .btn-conn:hover { background: #e2e8f0; }
+        .conn-origem.connected { background: #e3f2fd; color: #1565c0; border-color: #90caf9; }
+        .conn-colab.connected { background: #f3e5f5; color: #6a1b9a; border-color: #ce93d8; }
+        .conn-final.connected { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; }
+        .conn-solus.connected { background: #fce4ec; color: #ad1457; border-color: #f48fb1; }
+        .conn-error { background: #ffebee !important; color: #c62828 !important; border-color: #ef9a9a !important; animation: pulse-red 2s infinite; }
+        .divisor-v { width: 1px; height: 16px; background: #e2e8f0; margin: 0 3px; }
+
+        input[type="date"] { font-family: 'Inter', sans-serif; font-weight: 600; padding: 4px 7px; border-radius: 5px; border: 1px solid #dfe6e9; color: var(--secondary); cursor: pointer; font-size: 0.72rem; }
+
+        .dashboard-panel { background: var(--white); border-radius: 10px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: 1px solid #f1f3f5; margin-bottom: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .chart-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; height: 250px; display: flex; flex-direction: column; align-items: center; }
+        .chart-title { font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 10px; text-align: center; width: 100%; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px; }
+        .canvas-wrapper { width: 100%; flex-grow: 1; position: relative; }
+
+        .table-shell { background: var(--white); border-radius: 10px; overflow-x: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: 1px solid #f1f3f5; margin-bottom: 20px; }
+        table { width: 100%; min-width: 800px; border-collapse: collapse; table-layout: fixed; }
+        th { background: #f8fafc; padding: 12px 15px; text-align: left; font-size: 0.65rem; color: #64748b; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; }
+        td { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.82rem; vertical-align: middle; word-wrap: break-word; }
+
+        .row-idle { background-color: #fff8e1; }
+
+        .file-entry { padding: 5px 12px; border-radius: 5px; border: 1px solid; display: inline-block; width: 100%; box-sizing: border-box; word-wrap: break-word; }
+        .file-prod { background-color: var(--prod-bg); color: var(--prod-color); border-color: #bbdefb; }
+        .file-serv { background-color: var(--serv-bg); color: var(--serv-color); border-color: #c8e6c9; }
+        .file-juri { background-color: var(--juri-bg); color: var(--juri-color); border-color: #d1c4e9; }
+        .file-assi { background-color: var(--assi-bg); color: var(--assi-color); border-color: #ffe0b2; }
+        .file-outro { background-color: var(--outro-bg); color: var(--outro-color); border-color: #cfd8dc; }
+        .file-direto { background-color: #eceff1; color: #546e7a; border-color: #b0bec5; border-style: dashed; }
+
+        .tag-small { font-size: 0.55rem; font-weight: 900; text-transform: uppercase; margin-right: 8px; opacity: 0.7; }
+        .badge { padding: 4px 8px; border-radius: 15px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; display: inline-flex; align-items: center; gap: 4px; width: 100%; max-width: 130px; justify-content: center; box-sizing: border-box; text-align: center;}
+
+        .st-ok { background: var(--success-bg); color: var(--success-text); }
+        .st-transito { background: #e3f2fd; color: #1565c0; }
+        .st-na-pasta { background: var(--pending-bg); color: var(--pending-text); }
+        .st-direto { background: #eceff1; color: #37474f; font-style: italic; }
+        .st-manoel { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .st-recortado { background: #fff9c4; color: #f57f17; border: 1px solid #fff59d; }
+        .st-colab { background: #f3e5f5; color: #6a1b9a; border: 1px solid #e1bee7; }
+        .st-solus-ok { background: var(--success-bg); color: var(--success-text); }
+        .st-solus-alerta { background: var(--solus-alerta-bg); color: var(--solus-alerta-text); border: 1px solid #ffe082; }
+        .st-solus-nao-lancado { background: var(--solus-erro-bg); color: var(--solus-erro-text); border: 1px solid #ef9a9a; }
+        .st-solus-sem-arquivo { background: #eceff1; color: #37474f; border: 1px dashed #b0bec5; }
+
+        .btn-ciencia { background: #ff5252; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.55rem; font-weight: 900; cursor: pointer; text-transform: uppercase; margin-top: 4px; transition: 0.2s;}
+        .btn-ciencia:hover { background: #d32f2f; }
+
+        .chk-item, #checkAll { width: 16px; height: 16px; cursor: pointer; accent-color: #ef4444; margin-top: 5px; }
+
+        .sla-box { font-size: 0.7rem; font-weight: 700; color: #0288d1; display:flex; align-items:center; gap:4px; }
+        .sla-idle { color: #d84315; }
+
+        .divergencia-item { font-size: 0.68rem; color: #c62828; display: block; margin-top: 2px; }
+
+        .footer { padding: 15px; text-align: center; font-size: 0.7rem; color: #94a3b8; border-top: 1px solid #e0e6ed; background: white; width: 100%; box-sizing: border-box; }
+
+        @media (max-width: 900px) {
+            .dashboard-panel { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body onload="iniciar()">
+    <!-- config.local.js contém a URL do Apps Script e o token — NÃO deve ir para o Git (veja .gitignore) -->
+    <script src="config.local.js"></script>
+
+<nav class="nav">
+    <div class="brand">Monitor de Lançamentos</div>
+    <div class="widgets-top">
+        <div class="widget-item">PRODUTOS: <span id="w-prod">0</span></div>
+        <div class="widget-item">SERVIÇOS: <span id="w-serv">0</span></div>
+        <div class="widget-item">JURÍDICO: <span id="w-juri">0</span></div>
+        <div class="widget-item">ASSISTENCIAL: <span id="w-assi">0</span></div>
+        <div class="widget-item">OUTROS: <span id="w-outr">0</span></div>
+        <div style="color: #94a3b8">Ref: <span id="w-time">--:--:--</span></div>
+        <div id="sp-status-indicator" style="font-size: 0.78rem; font-weight: 700; margin-top: 4px;">⚪ Fora do SharePoint (salvando só localmente)</div>
+    </div>
+    <div class="status-pill"><div id="status-dot" class="dot"></div><span id="status-text">STANDBY</span></div>
+</nav>
+
+<div class="container">
+    <div class="grid-stats">
+        <div class="card"><div class="card-label">Baixados / Identificados</div><div id="v-total" class="card-val">0</div></div>
+        <div class="card"><div class="card-label">Em Aberto</div><div id="v-pend" class="card-val">0</div></div>
+        <div class="card"><div class="card-label">Conciliados</div><div id="v-ok" class="card-val">0</div></div>
+        <div class="card"><div class="card-label">Eficiência</div><div id="v-perc" class="card-val">0%</div></div>
+        <div class="card" id="card-asten" style="cursor:pointer; border: 1px solid #f9a825;" onclick="mostrarAba('asten')" title="Clique para ver, numa aba separada, quais itens do relatório Asten ainda não foram baixados">
+            <div class="card-label">Asten: Baixados / Pendentes</div>
+            <div class="card-val" style="font-size:1.3rem;"><span id="v-asten-baixados">0</span> / <span id="v-asten-pendentes" style="color:#c62828;">0</span></div>
+        </div>
+    </div>
+
+    <!-- PLACAR DE PRODUTIVIDADE (compacto, ao lado dos cards acima na versão desktop) -->
+    <div class="equipe-stats">
+        <div class="equipe-card">Daniela <span id="qtd-DANIELA">0</span></div>
+        <div class="equipe-card">Natalia <span id="qtd-NATALIA">0</span></div>
+        <div class="equipe-card">Quelita <span id="qtd-QUELITA">0</span></div>
+        <div class="equipe-card">Terezinha <span id="qtd-TEREZINHA">0</span></div>
+    </div>
+
+    <div class="toolbar">
+        <div class="toolbar-top">
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <input type="date" id="data-historico" title="Data do Histórico" onchange="aoTrocarData()">
+                <button class="btn btn-outline" id="btn-pendentes" onclick="alternarPendentes()" style="color: #ef6c00; border-color: #ef6c00;">🔍 Localizar Pendências</button>
+                <button class="btn btn-outline" onclick="processarForcado()" style="background:#0288d1; color:white; border:none;">🔄 Atualizar Agora</button>
+                <button class="btn btn-outline" id="btn-toggle-conexoes" onclick="toggleConexoes()" style="color:#0288d1; border-color:#0288d1;">🔌 Conexões</button>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn btn-outline" style="color:#8e44ad; border-color:#8e44ad; font-weight:800;" onclick="toggleDashboard()"><span id="dash-icon">📈</span> Dashboard Interno</button>
+                <button class="btn btn-outline" style="color:#d32f2f; border-color:#d32f2f;" onclick="darCienciaEmTudo()">✓ Ciência em Tudo</button>
+                <button class="btn btn-outline" style="color:#e65100; border-color:#e65100;" onclick="excluirSelecionados()">🗑️ Excluir Selecionados</button>
+                <button class="btn btn-outline" onclick="exportar()">📊 Relatório CSV</button>
+                <button class="btn btn-outline" style="color:#ef4444; border-color:#ef4444;" onclick="limparDB()">🗑️ Limpar BD</button>
+            </div>
+        </div>
+
+        <!-- RESUMO COMPACTO DAS CONEXÕES (sempre visível, mesmo com o painel recolhido) -->
+        <div id="resumo-conexoes" style="font-size:0.68rem; font-weight:700; color:#94a3b8; padding:0 4px;">
+            🔌 <span id="resumo-conexoes-texto">Nenhuma pasta conectada</span>
+        </div>
+
+        <!-- PAINEL DE CONEXÕES (recolhido por padrão — clique em "🔌 Conexões" para abrir) -->
+        <div id="conexao-bar-wrapper" style="display:none;">
+            <div class="conexao-bar">
+                <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">1. ENTRADA</span>
+                <button id="btn-conn-ORIGEM" class="btn-conn conn-origem" onclick="conectarPasta('ORIGEM')">📥 Origem</button>
+                <button id="btn-conn-ASTEN" class="btn-conn" style="background:#fff8e1; border-color:#f9a825; color:#8d6e00;" onclick="conectarPasta('ASTEN')" title="Pasta onde ficam os relatórios Excel da Asten, salvos por dia">📊 Relatório Asten</button>
+
+                <div class="divisor-v"></div>
+
+                <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">2. EQUIPE</span>
+                <button class="btn-conn" style="background: #e1bee7; border-color: #ba68c8; color: #4a148c; font-weight: 800;" onclick="conectarPastaEquipe()" title="Mapear todas as subpastas automaticamente">👥 Selecionar Pasta Mãe</button>
+                <button id="btn-conn-DANIELA" class="btn-conn conn-colab" onclick="conectarPasta('DANIELA')">👤 Daniela</button>
+                <button id="btn-conn-NATALIA" class="btn-conn conn-colab" onclick="conectarPasta('NATALIA')">👤 Natalia</button>
+                <button id="btn-conn-QUELITA" class="btn-conn conn-colab" onclick="conectarPasta('QUELITA')">👤 Quelita</button>
+                <button id="btn-conn-TEREZINHA" class="btn-conn conn-colab" onclick="conectarPasta('TEREZINHA')">👤 Terezinha</button>
+
+                <div class="divisor-v"></div>
+
+                <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">3. SAÍDA</span>
+                <button id="btn-conn-FINAL" class="btn-conn conn-final" onclick="conectarPasta('FINAL')">📂 Lançados</button>
+
+                <div class="divisor-v"></div>
+
+                <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">4. VALIDAÇÃO</span>
+                <button id="btn-conn-SOLUS" class="btn-conn conn-solus" onclick="conectarPasta('SOLUS')" title="Pasta onde fica o relatório diário do sistema Solus (NF, Prestador, CNPJ, Vencimento, Valor)">💰 Relatório Solus</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboard-container" class="dashboard-panel" style="display: none;">
+        <div class="chart-box">
+            <div class="chart-title">Status da Operação</div>
+            <div class="canvas-wrapper"><canvas id="chartStatus"></canvas></div>
+        </div>
+        <div class="chart-box">
+            <div class="chart-title">Volume por Colaboradora</div>
+            <div class="canvas-wrapper"><canvas id="chartProd"></canvas></div>
+        </div>
+        <div class="chart-box">
+            <div class="chart-title">SLA Médio (Minutos)</div>
+            <div class="canvas-wrapper"><canvas id="chartSLA"></canvas></div>
+        </div>
+    </div>
+
+    <!-- ABAS -->
+    <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+        <button id="tab-btn-lancamentos" class="btn" style="background:#1b5e20; color:white; border:none; font-weight:800;" onclick="mostrarAba('lancamentos')">📋 Lançamentos</button>
+        <button id="tab-btn-asten" class="btn btn-outline" style="color:#c62828; border-color:#c62828; font-weight:800;" onclick="mostrarAba('asten')">⏳ Não Identificados na Origem (Asten) <span id="badge-asten-pendentes" style="background:#c62828; color:white; border-radius:10px; padding:1px 8px; margin-left:4px;">0</span></button>
+        <button id="tab-btn-solus" class="btn btn-outline" style="color:#ad1457; border-color:#ad1457; font-weight:800;" onclick="mostrarAba('solus')">💰 Conciliação Solus <span id="badge-solus-alertas" style="background:#ad1457; color:white; border-radius:10px; padding:1px 8px; margin-left:4px;">0</span></button>
+    </div>
+
+    <div id="painel-lancamentos" class="table-shell">
+        <table>
+            <colgroup>
+                <col style="width:105px">
+                <col style="width:40px">
+                <col>
+                <col style="width:110px">
+                <col style="width:130px">
+                <col style="width:130px">
+                <col style="width:110px">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Protocolo</th>
+                    <th style="text-align:center"><input type="checkbox" id="checkAll" onclick="toggleCheckAll()" title="Selecionar Tudo"></th>
+                    <th>Documento Identificado</th>
+                    <th style="text-align:center">Responsável</th>
+                    <th style="text-align:center">Fluxo Interno</th>
+                    <th style="text-align:center">Status</th>
+                    <th style="text-align:center">Métricas (SLA)</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-corpo">
+                <tr><td colspan="7" style="text-align:center; padding:50px; color:#94a3b8; font-style: italic;">A carregar banco de dados...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="painel-asten" class="table-shell" style="display:none;">
+        <div style="padding:12px 16px; background:#fff3e0; color:#8d6e00; font-size:0.85rem; border-bottom:1px solid #ffe0b2;">
+            Itens que aparecem no relatório da Asten (para a data selecionada no filtro) mas que ainda não foram encontrados na pasta Origem.
+        </div>
+        <table>
+            <colgroup>
+                <col>
+                <col style="width:160px">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Nome do Arquivo Esperado (Asten)</th>
+                    <th style="text-align:center">Ação</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-asten-corpo">
+                <tr><td colspan="2" style="text-align:center; padding:50px; color:#94a3b8; font-style: italic;">Conecte a pasta "Relatório Asten" para ver a comparação.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="painel-solus" class="table-shell" style="display:none;">
+        <div style="padding:12px 16px; background:#fce4ec; color:#ad1457; font-size:0.85rem; border-bottom:1px solid #f8bbd0;">
+            Cruzamento entre os arquivos já lançados (pasta "Lançados") e o relatório do sistema Solus, por CNPJ + Nota Fiscal. Mostra o que foi lançado corretamente, o que está pendente de lançamento no Solus, o que foi lançado no Solus sem um arquivo correspondente, e possíveis divergências de digitação.
+        </div>
+        <table>
+            <colgroup>
+                <col style="width:110px">
+                <col>
+                <col style="width:160px">
+                <col style="width:150px">
+                <col style="width:150px">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>NF / CNPJ</th>
+                    <th>Arquivo / Fornecedor</th>
+                    <th style="text-align:center">Status</th>
+                    <th style="text-align:center">Dados no Solus</th>
+                    <th style="text-align:center">Divergências</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-solus-corpo">
+                <tr><td colspan="5" style="text-align:center; padding:50px; color:#94a3b8; font-style: italic;">Conecte a pasta "Relatório Solus" para ver a conciliação.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<footer class="footer">
+    Desenvolvido por <strong>Manoel Santana</strong> | Auditoria Equipa (v18.0 Final)
+</footer>
+
+<script>
+    // Configurações do Sistema
+    const IDLE_LIMIT_MS = 30 * 60 * 1000; // Alerta de Gargalo: 30 minutos
+    const EXCLUSAO_LIMIT_MS = 2 * 60 * 60 * 1000; // Aparecer lixeira após 2 horas de inatividade
+
+    // Variáveis Globais
+    let db = {};
+    let conexoes = { "ORIGEM": null, "ASTEN": null, "DANIELA": null, "NATALIA": null, "QUELITA": null, "TEREZINHA": null, "FINAL": null, "SOLUS": null };
+    let handlesPendentes = {}; // handles já conhecidos (salvos no IndexedDB) que ainda precisam de 1 clique para reconfirmar permissão
+    let monitorInterval;
+    let modoPendentesGlobais = false;
+    let isProcessing = false;
+    let chartInstances = { status: null, prod: null, sla: null };
+
+    // --- INTEGRAÇÃO COM LISTA DO SHAREPOINT ---
+    // Valores reais (URL/token) vêm de config.local.js, que fica FORA do Git.
+    // Veja config.example.js para o modelo a preencher em cada máquina.
+    const _CFG = window.APP_CONFIG || {};
+    const SP_CONFIG = Object.assign({ siteUrl: "", listName: "", ativo: false }, _CFG.sharepoint);
+    let filaSincronizacao = new Set();
+    // Fila separada para os dados extraídos do nome do arquivo no momento em que ele entra na Origem
+    // (NF, CNPJ, fornecedor, valores). Isso é gravado numa aba própria do Sheets ("Origem_Documentos")
+    // e serve de base confiável para a conciliação com o Solus, mesmo que o arquivo seja renomeado depois
+    // ao longo do fluxo, e mesmo consultando datas passadas em outro computador/navegador.
+    let filaOrigemSincronizacao = new Set();
+    let _spDigestCache = null;
+    let _spEntityType = null;
+    let spStatus = "aguardando";
+
+    // --- INTEGRAÇÃO COM GOOGLE SHEETS (via Apps Script Web App) ---
+    const GS_CONFIG = Object.assign({ webAppUrl: "", token: "", ativo: false }, _CFG.googleSheets);
+
+    async function sincronizarItemGoogleSheets(nomeArquivo, item) {
+        if (!GS_CONFIG.ativo || !GS_CONFIG.webAppUrl) return;
+        const payload = {
+            token: GS_CONFIG.token,
+            arquivo: nomeArquivo,
+            data: item.d || '',
+            hora: item.h || '',
+            tipo: item.t || '',
+            responsavel: item.resp || '',
+            fluxo: item.f || '',
+            status: item.a || '',
+            sla_minutos: (item.a === "CONCILIADO" && item.ts_in && item.ts_out) ? Math.floor(calcularSLA(item.ts_in, item.ts_out) / 60000) : '',
+            apagado: !!item.apagado
+        };
+        const resp = await fetch(GS_CONFIG.webAppUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        });
+        if (!resp.ok) throw new Error("Falha ao gravar no Google Sheets (" + resp.status + ")");
+    }
+
+    // Grava, na aba "Origem_Documentos" do Sheets, os dados extraídos do nome do arquivo no
+    // momento em que ele foi detectado na pasta Origem (antes de qualquer renomeação futura).
+    async function sincronizarItemOrigemGoogleSheets(nomeArquivo, item) {
+        if (!GS_CONFIG.ativo || !GS_CONFIG.webAppUrl) return;
+        const payload = {
+            token: GS_CONFIG.token,
+            tipoRegistro: 'origem',
+            arquivo: nomeArquivo,
+            data: item.d || '',
+            hora: item.h || '',
+            tipo: item.t || '',
+            unidade: item.unidade || '',
+            nf: item.nf || '',
+            fornecedor: item.fornecedor || '',
+            cnpj: item.cnpj || '',
+            formaPagamento: item.formaPagamento || '',
+            valorBruto: item.valorBruto || '',
+            valorLiquido: item.valorLiquido || '',
+            dataArquivo: item.data || ''
+        };
+        const resp = await fetch(GS_CONFIG.webAppUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        });
+        if (!resp.ok) throw new Error("Falha ao gravar registro de Origem no Google Sheets (" + resp.status + ")");
+    }
+
+    // Busca no Google Sheets os registros já salvos para uma data específica (DD/MM/AAAA).
+    // Usado ao consultar uma data retroativa, pra trazer o que já foi processado/salvo
+    // (inclusive em outro computador/navegador), sem depender das pastas ao vivo.
+    async function carregarDadosRemotosPorData(dataBr) {
+        if (!GS_CONFIG.ativo || !GS_CONFIG.webAppUrl) return;
+        try {
+            atualizarIndicadorSP('aguardando');
+
+            // 1) Status dos lançamentos (aba Lancamentos)
+            const url = `${GS_CONFIG.webAppUrl}?token=${encodeURIComponent(GS_CONFIG.token)}&data=${encodeURIComponent(dataBr)}`;
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error("Falha ao consultar histórico (" + resp.status + ")");
+            const json = await resp.json();
+            if (!json.ok) throw new Error(json.erro || "Erro desconhecido ao consultar histórico");
+
+            (json.registros || []).forEach(reg => {
+                const existente = db[reg.arquivo];
+                if (existente && existente.aoVivo) return; // nunca sobrescreve o que está sendo monitorado ao vivo hoje
+
+                db[reg.arquivo] = Object.assign({}, existente, {
+                    h: reg.hora || '',
+                    d: reg.data || dataBr,
+                    t: reg.tipo || (existente && existente.t) || 'OUTRO',
+                    resp: reg.responsavel || '-',
+                    f: reg.fluxo || '-',
+                    a: reg.status || 'AGUARDANDO',
+                    apagado: !!reg.apagado,
+                    slaMinutosSalvo: reg.sla_minutos || '',
+                    fonteSheet: true
+                });
+            });
+
+            // 2) Dados originais capturados na Origem (aba Origem_Documentos) — usados na conciliação com o Solus.
+            // Assim a conciliação usa a base do Sheets (não depende do nome atual do arquivo nem da pasta local).
+            try {
+                const urlOrigem = `${GS_CONFIG.webAppUrl}?token=${encodeURIComponent(GS_CONFIG.token)}&data=${encodeURIComponent(dataBr)}&fonte=origem`;
+                const respOrigem = await fetch(urlOrigem);
+                if (respOrigem.ok) {
+                    const jsonOrigem = await respOrigem.json();
+                    if (jsonOrigem.ok) {
+                        (jsonOrigem.registros || []).forEach(reg => {
+                            if (!db[reg.arquivo]) {
+                                db[reg.arquivo] = { h: reg.hora || '', d: reg.data || dataBr, a: 'AGUARDANDO', f: '-', resp: '-', apagado: false, fonteSheet: true };
+                            }
+                            Object.assign(db[reg.arquivo], {
+                                t: reg.tipo || db[reg.arquivo].t,
+                                unidade: reg.unidade || '',
+                                nf: reg.nf || '',
+                                fornecedor: reg.fornecedor || '',
+                                cnpj: reg.cnpj || '',
+                                formaPagamento: reg.formaPagamento || '',
+                                valorBruto: reg.valorBruto ? Number(reg.valorBruto) : undefined,
+                                valorLiquido: reg.valorLiquido ? Number(reg.valorLiquido) : undefined,
+                                data: reg.dataArquivo || ''
+                            });
+                        });
+                    }
+                }
+            } catch (eOrigem) {
+                console.error("Erro ao carregar dados de Origem do histórico remoto:", eOrigem);
+            }
+
+            await dbEngine.save(db);
+            atualizarIndicadorSP('ok');
+        } catch (e) {
+            console.error("Erro ao carregar histórico remoto:", e);
+            atualizarIndicadorSP('erro', e.message);
+        }
+    }
+
+    function estaDentroDoSharePoint() {
+        try {
+            const origem = window.location.origin.toLowerCase();
+            if (origem.includes('sharepoint.com')) return true;
+            return origem === new URL(SP_CONFIG.siteUrl).origin.toLowerCase();
+        } catch (e) {
+            return true;
+        }
+    }
+
+    function atualizarIndicadorSP(status, msg) {
+        spStatus = status;
+        const el = document.getElementById('sp-status-indicator');
+        if (!el) return;
+        const cores = { ok: '#2e7d32', erro: '#c62828', offline: '#78909c', aguardando: '#f9a825' };
+        const textos = { ok: '🟢 Sincronizado', erro: '🔴 Erro ao sincronizar', offline: '⚪ Nenhum destino configurado (salvando só localmente)', aguardando: '🟡 Sincronizando...' };
+        el.style.color = cores[status] || '#78909c';
+        el.title = msg || textos[status] || '';
+        el.innerText = textos[status] || '';
+    }
+
+    async function getRequestDigest() {
+        if (_spDigestCache && (Date.now() - _spDigestCache.time < 25 * 60 * 1000)) return _spDigestCache.value;
+        const resp = await fetch(`${SP_CONFIG.siteUrl}/_api/contextinfo`, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json;odata=verbose' },
+            credentials: 'same-origin'
+        });
+        if (!resp.ok) throw new Error("Falha ao obter o Request Digest do SharePoint (usuário sem sessão válida?)");
+        const data = await resp.json();
+        const digest = data.d.GetContextWebInformation.FormDigestValue;
+        _spDigestCache = { value: digest, time: Date.now() };
+        return digest;
+    }
+
+    async function getListEntityType() {
+        if (_spEntityType) return _spEntityType;
+        const resp = await fetch(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(SP_CONFIG.listName)}')?$select=ListItemEntityTypeFullName`, {
+            headers: { 'Accept': 'application/json;odata=verbose' },
+            credentials: 'same-origin'
+        });
+        if (!resp.ok) throw new Error("Não foi possível localizar a lista '" + SP_CONFIG.listName + "' no site do SharePoint.");
+        const data = await resp.json();
+        _spEntityType = data.d.ListItemEntityTypeFullName;
+        return _spEntityType;
+    }
+
+    async function sincronizarItemSharePoint(nomeArquivo, item) {
+        const digest = await getRequestDigest();
+        const entityType = await getListEntityType();
+
+        const corpo = {
+            '__metadata': { type: entityType },
+            Title: nomeArquivo,
+            Arquivo: nomeArquivo,
+            Data: item.d || null,
+            Hora: item.h || null,
+            Tipo: item.t || null,
+            Responsavel: item.resp || null,
+            Fluxo: item.f || null,
+            Status: item.a || null,
+            SLA_Minutos: (item.a === "CONCILIADO" && item.ts_in && item.ts_out) ? Math.floor(calcularSLA(item.ts_in, item.ts_out) / 60000) : null,
+            Apagado: !!item.apagado
+        };
+
+        const filtro = encodeURIComponent(`Title eq '${nomeArquivo.replace(/'/g, "''")}'`);
+        const buscaResp = await fetch(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(SP_CONFIG.listName)}')/items?$filter=${filtro}&$select=Id&$top=1`, {
+            headers: { 'Accept': 'application/json;odata=verbose' },
+            credentials: 'same-origin'
+        });
+        if (!buscaResp.ok) throw new Error("Falha ao consultar item existente na Lista.");
+        const buscaData = await buscaResp.json();
+        const existente = buscaData.d.results[0];
+
+        if (existente) {
+            const upResp = await fetch(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(SP_CONFIG.listName)}')/items(${existente.Id})`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json;odata=verbose',
+                    'Content-Type': 'application/json;odata=verbose',
+                    'X-RequestDigest': digest,
+                    'X-HTTP-Method': 'MERGE',
+                    'IF-MATCH': '*'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(corpo)
+            });
+            if (!upResp.ok) throw new Error("Falha ao atualizar item na Lista (" + upResp.status + ")");
+        } else {
+            const createResp = await fetch(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(SP_CONFIG.listName)}')/items`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json;odata=verbose',
+                    'Content-Type': 'application/json;odata=verbose',
+                    'X-RequestDigest': digest
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(corpo)
+            });
+            if (!createResp.ok) throw new Error("Falha ao criar item na Lista (" + createResp.status + ")");
+        }
+    }
+
+    let _sincronizando = false;
+    async function processarFilaSincronizacao() {
+        if (_sincronizando) return;
+        const spAtiva = SP_CONFIG.ativo && estaDentroDoSharePoint();
+        const gsAtiva = GS_CONFIG.ativo && !!GS_CONFIG.webAppUrl;
+        if (!spAtiva && !gsAtiva) { atualizarIndicadorSP('offline'); filaSincronizacao.clear(); filaOrigemSincronizacao.clear(); return; }
+        if (filaSincronizacao.size === 0 && filaOrigemSincronizacao.size === 0) return;
+
+        _sincronizando = true;
+        atualizarIndicadorSP('aguardando');
+        let houveErro = false;
+
+        const itens = Array.from(filaSincronizacao);
+        filaSincronizacao.clear();
+
+        for (const nome of itens) {
+            const item = db[nome];
+            if (!item) continue;
+            let falhouAlgo = false;
+
+            if (spAtiva) {
+                try {
+                    await sincronizarItemSharePoint(nome, item);
+                } catch (e) {
+                    console.error(`[SharePoint] Falha ao sincronizar "${nome}":`, e);
+                    falhouAlgo = true;
+                }
+            }
+            if (gsAtiva) {
+                try {
+                    await sincronizarItemGoogleSheets(nome, item);
+                } catch (e) {
+                    console.error(`[Google Sheets] Falha ao sincronizar "${nome}":`, e);
+                    falhouAlgo = true;
+                }
+            }
+
+            if (falhouAlgo) {
+                houveErro = true;
+                filaSincronizacao.add(nome);
+            }
+        }
+
+        // Fila de dados de Origem (NF/CNPJ/valores) — só depende do Google Sheets, não do SharePoint
+        if (gsAtiva) {
+            const itensOrigem = Array.from(filaOrigemSincronizacao);
+            filaOrigemSincronizacao.clear();
+            for (const nome of itensOrigem) {
+                const item = db[nome];
+                if (!item) continue;
+                try {
+                    await sincronizarItemOrigemGoogleSheets(nome, item);
+                } catch (e) {
+                    console.error(`[Google Sheets - Origem] Falha ao sincronizar "${nome}":`, e);
+                    houveErro = true;
+                    filaOrigemSincronizacao.add(nome);
+                }
+            }
+        }
+
+        atualizarIndicadorSP(houveErro ? 'erro' : 'ok');
+        _sincronizando = false;
+    }
+
+    // --- TRANSIÇÃO PARA INDEXEDDB ---
+    const dbEngine = {
+        init: function() {
+            return new Promise((resolve, reject) => {
+                let req = indexedDB.open("MonitorProDB", 1);
+                req.onupgradeneeded = (e) => {
+                    let idb = e.target.result;
+                    if(!idb.objectStoreNames.contains('lancamentos')) {
+                        idb.createObjectStore('lancamentos');
+                    }
+                };
+                req.onsuccess = (e) => resolve(e.target.result);
+                req.onerror = (e) => reject(e);
+            });
+        },
+        save: async function(data) {
+            try {
+                let idb = await this.init();
+                return new Promise((resolve) => {
+                    let tx = idb.transaction('lancamentos', 'readwrite');
+                    tx.objectStore('lancamentos').put(data, 'main_data');
+                    tx.oncomplete = () => resolve();
+                });
+            } catch(e) { console.error("Erro ao salvar IndexedDB", e); }
+        },
+        load: async function() {
+            try {
+                let idb = await this.init();
+                return new Promise((resolve) => {
+                    let tx = idb.transaction('lancamentos', 'readonly');
+                    let req = tx.objectStore('lancamentos').get('main_data');
+                    req.onsuccess = () => resolve(req.result || {});
+                });
+            } catch(e) { return {}; }
+        },
+        clear: async function() {
+            let idb = await this.init();
+            return new Promise((resolve) => {
+                let tx = idb.transaction('lancamentos', 'readwrite');
+                tx.objectStore('lancamentos').clear();
+                tx.oncomplete = () => resolve();
+            });
+        }
+    };
+
+    // --- ARMAZENAMENTO PERSISTENTE DOS "CAMINHOS" (handles de pasta) ---
+    // Guarda os FileSystemDirectoryHandle no IndexedDB para não precisar reabrir o seletor de pastas toda vez.
+    const handleEngine = {
+        init: function() {
+            return new Promise((resolve, reject) => {
+                let req = indexedDB.open("MonitorHandlesDB", 1);
+                req.onupgradeneeded = (e) => {
+                    let idb = e.target.result;
+                    if (!idb.objectStoreNames.contains('handles')) {
+                        idb.createObjectStore('handles');
+                    }
+                };
+                req.onsuccess = (e) => resolve(e.target.result);
+                req.onerror = (e) => reject(e);
+            });
+        },
+        save: async function(refID, handle) {
+            try {
+                let idb = await this.init();
+                return new Promise((resolve) => {
+                    let tx = idb.transaction('handles', 'readwrite');
+                    tx.objectStore('handles').put(handle, refID);
+                    tx.oncomplete = () => resolve();
+                });
+            } catch(e) { console.error("Erro ao salvar caminho da pasta", e); }
+        },
+        loadAll: async function() {
+            try {
+                let idb = await this.init();
+                return new Promise((resolve) => {
+                    let tx = idb.transaction('handles', 'readonly');
+                    let store = tx.objectStore('handles');
+                    let resultado = {};
+                    let cursorReq = store.openCursor();
+                    cursorReq.onsuccess = (e) => {
+                        let cursor = e.target.result;
+                        if (cursor) {
+                            resultado[cursor.key] = cursor.value;
+                            cursor.continue();
+                        } else {
+                            resolve(resultado);
+                        }
+                    };
+                    cursorReq.onerror = () => resolve({});
+                });
+            } catch(e) { return {}; }
+        },
+        remove: async function(refID) {
+            try {
+                let idb = await this.init();
+                return new Promise((resolve) => {
+                    let tx = idb.transaction('handles', 'readwrite');
+                    tx.objectStore('handles').delete(refID);
+                    tx.oncomplete = () => resolve();
+                });
+            } catch(e) {}
+        }
+    };
+
+    // Ao carregar a página, tenta restaurar as pastas conectadas na última sessão.
+    // Por segurança do navegador, a permissão em si não fica "gravada" para sempre —
+    // mas o caminho da pasta sim, então normalmente basta 1 clique em "Reconectar"
+    // (sem precisar navegar pelas pastas do Windows de novo).
+    async function restaurarConexoesSalvas() {
+        const handles = await handleEngine.loadAll();
+        let algumaAutoReconectada = false;
+
+        for (let refID in handles) {
+            const handle = handles[refID];
+            try {
+                const permissao = await handle.queryPermission({ mode: 'read' });
+                if (permissao === 'granted') {
+                    conexoes[refID] = handle;
+                    algumaAutoReconectada = true;
+                } else {
+                    // Handle conhecido, mas precisa de 1 clique do usuário para reconfirmar a permissão
+                    handlesPendentes[refID] = handle;
+                }
+            } catch (e) {
+                handlesPendentes[refID] = handle;
+            }
+        }
+
+        atualizarBotoesVisuais();
+        if (algumaAutoReconectada) ativarMonitoramento();
+        if (Object.keys(handlesPendentes).length > 0) {
+            toggleConexoes(true);
+        }
+    }
+
+
+    async function iniciar() {
+        document.getElementById('data-historico').value = getHojeISO();
+        db = await dbEngine.load();
+        atualizarBotoesVisuais();
+        atualizarTela();
+        atualizarPainelSolus();
+        atualizarIndicadorSP((estaDentroDoSharePoint() || (GS_CONFIG.ativo && GS_CONFIG.webAppUrl)) ? 'ok' : 'offline');
+        await restaurarConexoesSalvas();
+    }
+
+    // --- FUNÇÕES UTILITÁRIAS ---
+    function classificarTipo(nome) {
+        const nL = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        if(nL.includes('assistencial')) return 'ASSISTENCIAL';
+        if(nL.includes('produto') || nL.includes('opme')) return 'PRODUTO';
+        if(nL.includes('servico')) return 'SERVIÇO';
+        if(nL.includes('juridico')) return 'JURIDICO';
+        return 'OUTRO';
+    }
+
+    function getHojeBR() { const d = new Date(); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; }
+    function getAgoraHR() { return new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'}); }
+    function getHojeISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+    function getDataSelecionada() {
+        const dataIso = document.getElementById('data-historico').value;
+        if (!dataIso) return getHojeBR();
+        const partes = dataIso.split('-');
+        return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : getHojeBR();
+    }
+
+    function calcularSLA(ts_in, ts_out) {
+        if(!ts_in || !ts_out) return 0;
+        return Math.max(0, ts_out - ts_in);
+    }
+
+    function formatarTempoSLA(ms) {
+        if(ms === 0) return "-";
+        let mins = Math.floor(ms / 60000);
+        let hrs = Math.floor(mins / 60);
+        mins = mins % 60;
+        if(hrs > 0) return `${hrs}h ${mins}m`;
+        return `${mins}m`;
+    }
+
+    function alternarPendentes() {
+        modoPendentesGlobais = !modoPendentesGlobais;
+        const btn = document.getElementById('btn-pendentes');
+        const calendario = document.getElementById('data-historico');
+        btn.innerHTML = modoPendentesGlobais ? "📅 Voltar ao Calendário" : "🔍 Localizar Pendências";
+        btn.style.backgroundColor = modoPendentesGlobais ? "#fff3e0" : "var(--white)";
+        calendario.disabled = modoPendentesGlobais;
+        calendario.style.opacity = modoPendentesGlobais ? "0.5" : "1";
+        atualizarTela();
+        processarForcado();
+    }
+
+    // Disparado quando o usuário troca a data no calendário.
+    // Hoje: monitora as pastas ao vivo normalmente.
+    // Data passada: primeiro traz o que está salvo no Google Sheets (útil se este navegador
+    // nunca processou aquele dia), depois deixa o processar() atualizar Asten/Solus (que são
+    // sempre lidos por data, independente de ser hoje ou não).
+    async function aoTrocarData() {
+        atualizarTela();
+        atualizarPainelSolus();
+
+        const hojeIso = getHojeISO();
+        const dataSelecionadaIso = document.getElementById('data-historico').value;
+
+        if (dataSelecionadaIso !== hojeIso) {
+            await carregarDadosRemotosPorData(getDataSelecionada());
+            atualizarTela();
+            atualizarPainelSolus();
+        }
+        processarForcado();
+    }
+
+    // --- GERENCIADOR DO DASHBOARD ---
+    function toggleDashboard() {
+        const painel = document.getElementById('dashboard-container');
+        const icon = document.getElementById('dash-icon');
+
+        if (painel.style.display === 'none') {
+            painel.style.display = 'grid';
+            icon.innerText = '📉';
+            renderizarDashboard();
+        } else {
+            painel.style.display = 'none';
+            icon.innerText = '📈';
+        }
+    }
+
+    function renderizarDashboard() {
+        if (typeof Chart === 'undefined') return;
+
+        const dataFiltro = getDataSelecionada();
+        const chaves = Object.keys(db).filter(n => !db[n].apagado && (modoPendentesGlobais ? db[n].a !== "CONCILIADO" : db[n].d === dataFiltro));
+
+        let statCounts = { conciliado: 0, andamento: 0, aguardando: 0 };
+        let prodCounts = { "DANIELA": 0, "NATALIA": 0, "QUELITA": 0, "TEREZINHA": 0 };
+        let slaData = { "DANIELA": { total: 0, c: 0 }, "NATALIA": { total: 0, c: 0 }, "QUELITA": { total: 0, c: 0 }, "TEREZINHA": { total: 0, c: 0 } };
+
+        chaves.forEach(n => {
+            const r = db[n];
+            if (r.a === "CONCILIADO") statCounts.conciliado++;
+            else if (r.a === "EM ANDAMENTO") statCounts.andamento++;
+            else statCounts.aguardando++;
+
+            if (prodCounts[r.resp] !== undefined) prodCounts[r.resp]++;
+
+            if (r.a === "CONCILIADO" && r.ts_in && r.ts_out && slaData[r.resp] !== undefined) {
+                let mins = Math.max(0, (r.ts_out - r.ts_in) / 60000);
+                slaData[r.resp].total += mins;
+                slaData[r.resp].c++;
+            }
+        });
+
+        const labelsColab = ["Daniela", "Natalia", "Quelita", "Terezinha"];
+        const keysColab = ["DANIELA", "NATALIA", "QUELITA", "TEREZINHA"];
+
+        const dataProd = keysColab.map(k => prodCounts[k]);
+        const dataSLA = keysColab.map(k => slaData[k].c > 0 ? Math.round(slaData[k].total / slaData[k].c) : 0);
+
+        const colors = {
+            conciliado: '#4caf50', andamento: '#ff9800', aguardando: '#9e9e9e',
+            colabs: ['#9b59b6', '#3498db', '#1abc9c', '#e67e22']
+        };
+
+        const buildChart = (chartId, type, labels, data, bgColors) => {
+            if (chartInstances[chartId]) chartInstances[chartId].destroy();
+            const ctx = document.getElementById(chartId).getContext('2d');
+
+            chartInstances[chartId] = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: bgColors,
+                        borderRadius: type === 'bar' ? 6 : 0,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: type !== 'bar', position: 'bottom' },
+                        tooltip: { padding: 10, cornerRadius: 4 }
+                    },
+                    scales: type === 'bar' ? {
+                        y: { beginAtZero: true, ticks: { precision: 0 } },
+                        x: { grid: { display: false } }
+                    } : {}
+                }
+            });
+        };
+
+        buildChart('chartStatus', 'doughnut', ['Conciliados', 'Em Andamento', 'Aguardando / Outros'], [statCounts.conciliado, statCounts.andamento, statCounts.aguardando], [colors.conciliado, colors.andamento, colors.aguardando]);
+        buildChart('chartProd', 'bar', labelsColab, dataProd, colors.colabs);
+        buildChart('chartSLA', 'bar', labelsColab, dataSLA, colors.colabs);
+    }
+
+    // --- GESTÃO DE CONEXÕES COM REQUISIÇÃO DE PERMISSÃO RECURSIVA ---
+    async function conectarPastaEquipe() {
+        try {
+            let parentHandle = await window.showDirectoryPicker({ mode: 'read' });
+            let foundAny = false;
+            const equipe = ["DANIELA", "NATALIA", "QUELITA", "TEREZINHA"];
+
+            for await (const entry of parentHandle.values()) {
+                if (entry.kind === 'directory') {
+                    let folderName = entry.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+
+                    for (let colab of equipe) {
+                        if (folderName.includes(colab)) {
+                            await verifyPermission(entry);
+
+                            conexoes[colab] = entry;
+                            delete handlesPendentes[colab];
+                            await handleEngine.save(colab, entry);
+                            document.getElementById(`btn-conn-${colab}`).classList.remove("conn-error");
+                            foundAny = true;
+                        }
+                    }
+                }
+            }
+
+            if (foundAny) {
+                ativarMonitoramento();
+            } else {
+                alert("Atenção: Não foram encontradas subpastas com os nomes da equipe (Daniela, Natalia, Quelita, Terezinha) dentro desta pasta principal.");
+            }
+        } catch (e) {
+            console.log("Conexão da pasta de equipe cancelada.");
+        }
+    }
+
+    async function verifyPermission(fileHandle) {
+        const options = { mode: 'read' };
+        if ((await fileHandle.queryPermission(options)) === 'granted') {
+            return true;
+        }
+        if ((await fileHandle.requestPermission(options)) === 'granted') {
+            return true;
+        }
+        return false;
+    }
+
+    // --- SUPORTE A SUBPASTAS POR DATA ---
+    function extrairDigitos(txt) {
+        return (txt || "").replace(/[^0-9]/g, '');
+    }
+
+    function pastaCorrespondeAData(nomePasta, dataIso) {
+        if (!dataIso) return false;
+        const partes = dataIso.split('-');
+        if (partes.length !== 3) return false;
+        const [ano, mes, dia] = partes;
+        const anoCurto = ano.slice(2);
+        const d = extrairDigitos(nomePasta);
+        if (!d) return false;
+
+        const formatosAlvo = new Set([
+            dia,
+            String(parseInt(dia, 10)),
+            `${dia}${mes}`,
+            `${mes}${dia}`,
+            `${dia}${mes}${ano}`,
+            `${dia}${mes}${anoCurto}`,
+            `${ano}${mes}${dia}`,
+            `${mes}${dia}${ano}`
+        ]);
+        return formatosAlvo.has(d);
+    }
+
+    const NOMES_MESES = ["JANEIRO","FEVEREIRO","MARCO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
+
+    function normalizarNome(nome) {
+        return (nome || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    }
+
+    function pastaCorrespondeAno(nomePasta, dataIso) {
+        const ano = dataIso.split('-')[0];
+        const d = extrairDigitos(nomePasta);
+        return d !== '' && (d === ano || d === ano.slice(2));
+    }
+
+    function pastaCorrespondeMes(nomePasta, dataIso) {
+        const [ano, mes] = dataIso.split('-');
+        const anoCurto = ano.slice(2);
+        const d = extrairDigitos(nomePasta);
+        if (d !== '' && (d === mes || d === `${mes}${ano}` || d === `${ano}${mes}` || d === `${mes}${anoCurto}`)) return true;
+        const mesIdx = parseInt(mes, 10) - 1;
+        if (mesIdx >= 0 && mesIdx < 12) {
+            const nomeNorm = normalizarNome(nomePasta);
+            const nomeMes = NOMES_MESES[mesIdx];
+            if (nomeNorm.includes(nomeMes) || nomeNorm.includes(nomeMes.slice(0, 3))) return true;
+        }
+        return false;
+    }
+
+    async function encontrarPastaDoDia(rootHandle, dataIso, profundidade = 0) {
+        if (!rootHandle || profundidade > 3) return null;
+        let candidatoDia = null, candidatoMes = null, candidatoAno = null;
+
+        for await (const entry of rootHandle.values()) {
+            if (entry.kind !== 'directory') continue;
+            if (!candidatoDia && pastaCorrespondeAData(entry.name, dataIso)) {
+                candidatoDia = entry;
+            } else if (!candidatoMes && pastaCorrespondeMes(entry.name, dataIso)) {
+                candidatoMes = entry;
+            } else if (!candidatoAno && pastaCorrespondeAno(entry.name, dataIso)) {
+                candidatoAno = entry;
+            }
+        }
+
+        if (candidatoDia) return candidatoDia;
+        if (candidatoMes) {
+            const achouNoMes = await encontrarPastaDoDia(candidatoMes, dataIso, profundidade + 1);
+            if (achouNoMes) return achouNoMes;
+        }
+        if (candidatoAno) {
+            const achouNoAno = await encontrarPastaDoDia(candidatoAno, dataIso, profundidade + 1);
+            if (achouNoAno) return achouNoAno;
+        }
+        return null;
+    }
+
+    async function conectarPasta(refID) {
+        // Se já conhecemos o caminho desta conexão (sessão anterior), tenta só reconfirmar a
+        // permissão com 1 clique, sem abrir o seletor de pastas do Windows de novo.
+        if (handlesPendentes[refID]) {
+            try {
+                const concedida = await verifyPermission(handlesPendentes[refID]);
+                if (concedida) {
+                    conexoes[refID] = handlesPendentes[refID];
+                    delete handlesPendentes[refID];
+                    document.getElementById(`btn-conn-${refID}`).classList.remove("conn-error");
+                    ativarMonitoramento();
+                    return;
+                }
+            } catch (e) {
+                console.log(`Handle salvo para ${refID} não pôde ser reutilizado, abrindo seletor de pastas.`);
+            }
+        }
+
+        try {
+            let handle = await window.showDirectoryPicker({ mode: 'read' });
+            conexoes[refID] = handle;
+            delete handlesPendentes[refID];
+            await handleEngine.save(refID, handle);
+            document.getElementById(`btn-conn-${refID}`).classList.remove("conn-error");
+            ativarMonitoramento();
+        } catch (e) {
+            console.log(`Conexão cancelada para ${refID}.`);
+        }
+    }
+
+    function ativarMonitoramento() {
+        atualizarBotoesVisuais();
+        let algumaConectada = Object.values(conexoes).some(h => h !== null);
+
+        if (algumaConectada) {
+            document.getElementById('status-dot').className = "dot dot-active";
+            document.getElementById('status-text').innerText = "MONITORANDO";
+            if(monitorInterval) clearInterval(monitorInterval);
+            monitorInterval = setInterval(processar, 8000);
+            processar();
+        }
+    }
+
+    let conexoesVisiveis = false;
+    function toggleConexoes(forcarAberto) {
+        conexoesVisiveis = forcarAberto === true ? true : !conexoesVisiveis;
+        document.getElementById('conexao-bar-wrapper').style.display = conexoesVisiveis ? 'block' : 'none';
+        document.getElementById('btn-toggle-conexoes').innerHTML = conexoesVisiveis ? '🔼 Ocultar Conexões' : '🔌 Conexões';
+    }
+
+    function atualizarResumoConexoes() {
+        const nomes = { ORIGEM: 'Origem', ASTEN: 'Asten', DANIELA: 'Daniela', NATALIA: 'Natalia', QUELITA: 'Quelita', TEREZINHA: 'Terezinha', FINAL: 'Lançados', SOLUS: 'Solus' };
+        const chaves = Object.keys(conexoes);
+        const conectados = chaves.filter(k => conexoes[k] !== null);
+        const el = document.getElementById('resumo-conexoes-texto');
+        if (!el) return;
+        if (conectados.length === 0) {
+            el.innerText = 'Nenhuma pasta conectada — clique em "🔌 Conexões" para conectar';
+            el.parentElement.style.color = '#94a3b8';
+        } else {
+            el.innerText = `${conectados.length}/${chaves.length} conectadas: ${conectados.map(k => nomes[k] || k).join(', ')}`;
+            el.parentElement.style.color = conectados.length === chaves.length ? '#2e7d32' : '#f9a825';
+        }
+    }
+
+    function atualizarBotoesVisuais(refErro = null) {
+        for (let key in conexoes) {
+            let btn = document.getElementById(`btn-conn-${key}`);
+            if (!btn) continue;
+            if (refErro === key) {
+                btn.classList.add("conn-error");
+                btn.classList.remove("connected");
+                btn.innerHTML = `⚠️ Reconectar ${key}`;
+            } else if (conexoes[key] !== null) {
+                btn.classList.add("connected");
+                btn.classList.remove("conn-error");
+                if(key==='ORIGEM') btn.innerHTML = '📥 Origem';
+                else if(key==='FINAL') btn.innerHTML = '📂 Lançados';
+                else if(key==='ASTEN') btn.innerHTML = '📊 Relatório Asten';
+                else if(key==='SOLUS') btn.innerHTML = '💰 Relatório Solus';
+                else btn.innerHTML = `👤 ${key.charAt(0) + key.slice(1).toLowerCase()}`;
+            } else if (handlesPendentes[key]) {
+                btn.classList.add("conn-error");
+                btn.classList.remove("connected");
+                btn.innerHTML = `⚠️ Reconectar`;
+            } else {
+                btn.classList.remove("connected");
+                btn.classList.remove("conn-error");
+            }
+        }
+        atualizarResumoConexoes();
+    }
+
+    async function obterArquivosPasta(rootHandle, idRef) {
+        let fileSet = new Set();
+        if (!rootHandle) return fileSet;
+        try {
+            await verifyPermission(rootHandle);
+
+            const dataAlvoIso = document.getElementById('data-historico').value || getHojeISO();
+
+            for await (const handle of rootHandle.values()) {
+                if (handle.kind === 'file' && !handle.name.startsWith('.')) {
+                    fileSet.add(handle.name);
+                }
+            }
+
+            const pastaDoDia = await encontrarPastaDoDia(rootHandle, dataAlvoIso);
+            if (pastaDoDia) {
+                await verifyPermission(pastaDoDia);
+                for await (const handle of pastaDoDia.values()) {
+                    if (handle.kind === 'file' && !handle.name.startsWith('.')) {
+                        fileSet.add(handle.name);
+                    }
+                }
+            }
+        } catch(e) {
+            throw { message: "PERMISSAO_REVOGADA", ref: idRef };
+        }
+        return fileSet;
+    }
+
+    function processarForcado() {
+        if(!isProcessing) processar();
+    }
+
+    // --- LEITURA DO RELATÓRIO ASTEN (Excel, salvo por dia numa pasta única) ---
+    let _astenCache = { dataIso: null, nomeArquivo: null, mtime: null, nomes: null };
+    let astenEsperadosAtual = new Set();
+    let astenPendentesAtual = [];
+
+    // CORRIGIDO: sempre lê a Coluna A (índice 0), pulando a linha de cabeçalho.
+    function extrairNomesEsperados(linhas) {
+        let nomes = new Set();
+        if (!linhas || linhas.length === 0) return nomes;
+
+        for (let i = 1; i < linhas.length; i++) {
+            const linha = linhas[i] || [];
+            const v = String(linha[0] || '').trim();
+            if (v) nomes.add(v);
+        }
+        return nomes;
+    }
+
+    async function obterEsperadosAsten(dataAlvoIso) {
+        if (!conexoes["ASTEN"]) return new Set();
+        try {
+            await verifyPermission(conexoes["ASTEN"]);
+
+            let arquivoAlvo = null;
+            for await (const handle of conexoes["ASTEN"].values()) {
+                if (handle.kind === 'file' && !handle.name.startsWith('.') && pastaCorrespondeAData(handle.name, dataAlvoIso)) {
+                    arquivoAlvo = handle;
+                    break;
+                }
+            }
+            if (!arquivoAlvo) return new Set();
+
+            const file = await arquivoAlvo.getFile();
+            if (_astenCache.dataIso === dataAlvoIso && _astenCache.nomeArquivo === arquivoAlvo.name && _astenCache.mtime === file.lastModified) {
+                return _astenCache.nomes;
+            }
+
+            const buffer = await file.arrayBuffer();
+            const workbook = XLSX.read(buffer, { type: 'array' });
+            const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
+            const linhas = XLSX.utils.sheet_to_json(primeiraAba, { header: 1, defval: '' });
+
+            const nomes = extrairNomesEsperados(linhas);
+            _astenCache = { dataIso: dataAlvoIso, nomeArquivo: arquivoAlvo.name, mtime: file.lastModified, nomes };
+            return nomes;
+        } catch (e) {
+            console.error("Erro ao ler o relatório Asten:", e);
+            return new Set();
+        }
+    }
+
+    function atualizarPainelAsten() {
+        const baixados = [...astenEsperadosAtual].filter(n => db[n] && !db[n].apagado);
+        astenPendentesAtual = [...astenEsperadosAtual].filter(n => !(db[n] && !db[n].apagado));
+        document.getElementById('v-asten-baixados').innerText = baixados.length;
+        document.getElementById('v-asten-pendentes').innerText = astenPendentesAtual.length;
+        document.getElementById('badge-asten-pendentes').innerText = astenPendentesAtual.length;
+        atualizarTabelaAsten();
+    }
+
+    function atualizarTabelaAsten() {
+        const corpo = document.getElementById('tabela-asten-corpo');
+        if (!corpo) return;
+
+        if (!conexoes["ASTEN"]) {
+            corpo.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:50px; color:#94a3b8; font-style: italic;">Conecte a pasta "Relatório Asten" para ver a comparação.</td></tr>`;
+            return;
+        }
+        if (astenEsperadosAtual.size === 0) {
+            corpo.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:50px; color:#94a3b8; font-style: italic;">Nenhum relatório Asten encontrado com a data selecionada no nome do arquivo.</td></tr>`;
+            return;
+        }
+        if (astenPendentesAtual.length === 0) {
+            corpo.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:50px; color:#2e7d32; font-weight:700;">✅ Todos os itens do relatório Asten do dia selecionado já foram baixados na pasta Origem.</td></tr>`;
+            return;
+        }
+
+        corpo.innerHTML = astenPendentesAtual.map(nome => `
+            <tr>
+                <td>${nome}</td>
+                <td style="text-align:center;">
+                    <button class="btn btn-outline" style="padding:4px 10px; font-size:0.78rem;" onclick="navigator.clipboard.writeText('${nome.replace(/'/g, "\\'")}'); this.innerText='Copiado!'; setTimeout(()=>this.innerText='📋 Copiar nome', 1500);">📋 Copiar nome</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // --- LEITURA DO RELATÓRIO SOLUS (Excel, salvo por dia numa pasta única) ---
+    let _solusCache = { dataIso: null, nomeArquivo: null, mtime: null, registros: null };
+    let solusRegistrosAtual = [];
+
+    function extrairRegistrosSolus(linhas) {
+        let registros = [];
+        if (!linhas || linhas.length === 0) return registros;
+        const cabecalho = (linhas[0] || []).map(h => normalizarNome(String(h || '')));
+        const idxNF = cabecalho.findIndex(h => h.includes('NF') || h.includes('NOTA FISCAL') || h.includes('NUMERO'));
+        const idxCNPJ = cabecalho.findIndex(h => h.includes('CNPJ'));
+        const idxPrestador = cabecalho.findIndex(h => h.includes('PRESTADOR') || h.includes('FORNECEDOR'));
+        const idxVenc = cabecalho.findIndex(h => h.includes('VENCIMENTO'));
+        const idxValor = cabecalho.findIndex(h => h.includes('VALOR'));
+
+        for (let i = 1; i < linhas.length; i++) {
+            const linha = linhas[i] || [];
+            const nf = idxNF >= 0 ? normalizarNF(linha[idxNF]) : '';
+            const cnpj = idxCNPJ >= 0 ? normalizarCNPJ(linha[idxCNPJ]) : '';
+            if (!nf && !cnpj) continue;
+            registros.push({
+                nf, cnpj,
+                prestador: idxPrestador >= 0 ? String(linha[idxPrestador] || '').trim() : '',
+                vencimento: idxVenc >= 0 ? String(linha[idxVenc] || '').trim() : '',
+                valor: idxValor >= 0 ? (Number(String(linha[idxValor]).replace(/[^\d,.-]/g,'').replace(',', '.')) || 0) : 0
+            });
+        }
+        return registros;
+    }
+
+    async function obterRegistrosSolus(dataAlvoIso) {
+        if (!conexoes["SOLUS"]) return [];
+        try {
+            await verifyPermission(conexoes["SOLUS"]);
+            let arquivoAlvo = null;
+            for await (const handle of conexoes["SOLUS"].values()) {
+                if (handle.kind === 'file' && !handle.name.startsWith('.') && pastaCorrespondeAData(handle.name, dataAlvoIso)) {
+                    arquivoAlvo = handle; break;
+                }
+            }
+            if (!arquivoAlvo) return [];
+            const file = await arquivoAlvo.getFile();
+            if (_solusCache.dataIso === dataAlvoIso && _solusCache.nomeArquivo === arquivoAlvo.name && _solusCache.mtime === file.lastModified) {
+                return _solusCache.registros;
+            }
+            const buffer = await file.arrayBuffer();
+            const workbook = XLSX.read(buffer, { type: 'array' });
+            const linhas = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: '' });
+            const registros = extrairRegistrosSolus(linhas);
+            _solusCache = { dataIso: dataAlvoIso, nomeArquivo: arquivoAlvo.name, mtime: file.lastModified, registros };
+            return registros;
+        } catch (e) {
+            console.error("Erro ao ler o relatório Solus:", e);
+            return [];
+        }
+    }
+
+    // --- PARSER DO NOME DO ARQUIVO ---
+    // Padrão: TIPO_UNIDADE_NF_FORNECEDOR_CNPJ_DATA_FORMAPAGTO_EXTRA1_EXTRA2.ext
+    // Ex: Produto_CENTROMULTIDISCIPLINARUNIMED_000311_BRATTIOPAPEISDEPAREDELTDA_38132280000164_09072026_PIX_00265722_00265722.pdf
+    function parseNomeArquivo(nomeArquivo) {
+        const semExtensao = nomeArquivo.replace(/\.[^.]+$/, '');
+        const partes = semExtensao.split('_');
+        if (partes.length < 6) return null;
+
+        const resultado = { tipo: partes[0] || '', unidade: partes[1] || '', nf: '', fornecedor: '', cnpj: '', data: '', formaPagamento: '', extras: [] };
+
+        if (partes[2] && /^\d+$/.test(partes[2])) resultado.nf = normalizarNF(partes[2]);
+        resultado.fornecedor = partes[3] || '';
+        if (partes[4] && /^\d{14}$/.test(partes[4])) resultado.cnpj = partes[4];
+        if (partes[5] && /^\d{8}$/.test(partes[5])) {
+            const d = partes[5];
+            resultado.data = `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4,8)}`;
+        }
+        resultado.formaPagamento = partes[6] || '';
+        resultado.extras = partes.slice(7);
+
+        // Os dois números finais do nome são: Valor Bruto e Valor Líquido (últimos 2 dígitos = centavos).
+        // Em PIX costumam ser iguais (sem retenção); em Boleto/serviços costuma haver diferença (retenção de imposto).
+        if (resultado.extras[0] && /^\d+$/.test(resultado.extras[0])) resultado.valorBruto = parseValorMonetario(resultado.extras[0]);
+        if (resultado.extras[1] && /^\d+$/.test(resultado.extras[1])) resultado.valorLiquido = parseValorMonetario(resultado.extras[1]);
+
+        return resultado;
+    }
+
+    // Converte string tipo "00332564" em valor monetário 3325.64 (últimos 2 dígitos = centavos)
+    function parseValorMonetario(str) {
+        if (!str || str.length < 3) return null;
+        const centavos = str.slice(-2);
+        const reais = str.slice(0, -2);
+        const valor = parseFloat(reais + '.' + centavos);
+        return isNaN(valor) ? null : valor;
+    }
+
+    function normalizarCNPJ(v) { return String(v || '').replace(/[^\d]/g, ''); }
+    function normalizarNF(v) { return String(v || '').replace(/[^\d]/g, '').replace(/^0+/, '') || '0'; }
+
+    // Validação de dígito verificador do CNPJ (algoritmo oficial da Receita Federal)
+    function validarCNPJ(cnpj) {
+        cnpj = normalizarCNPJ(cnpj);
+        if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
+        const calc = (base) => {
+            let soma = 0, peso = base.length - 7;
+            for (let i = 0; i < base.length; i++) {
+                soma += parseInt(base[i]) * peso;
+                peso = peso === 2 ? 9 : peso - 1;
+            }
+            const resto = soma % 11;
+            return resto < 2 ? 0 : 11 - resto;
+        };
+        const dv1 = calc(cnpj.slice(0, 12));
+        const dv2 = calc(cnpj.slice(0, 12) + dv1);
+        return cnpj === cnpj.slice(0, 12) + String(dv1) + String(dv2);
+    }
+
+    // Similaridade de texto (Levenshtein normalizado, 0 a 1) — pra achar nomes de fornecedor
+    // digitados diferente entre o arquivo e o Solus (ex: erro de digitação).
+    function normalizarTexto(t) {
+        return (t || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    }
+    function distanciaLevenshtein(a, b) {
+        const m = a.length, n = b.length;
+        const d = Array.from({length: m+1}, () => new Array(n+1).fill(0));
+        for (let i = 0; i <= m; i++) d[i][0] = i;
+        for (let j = 0; j <= n; j++) d[0][j] = j;
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+            }
+        }
+        return d[m][n];
+    }
+    function similaridadeTexto(a, b) {
+        const na = normalizarTexto(a), nb = normalizarTexto(b);
+        if (!na || !nb) return 0;
+        const maxLen = Math.max(na.length, nb.length);
+        return maxLen === 0 ? 1 : 1 - (distanciaLevenshtein(na, nb) / maxLen);
+    }
+
+    // Compara o registro extraído do nome do arquivo com o registro correspondente do Solus
+    // e lista possíveis divergências (indícios de erro de digitação no Solus): CNPJ inválido,
+    // nome do fornecedor diferente, data divergente e valor líquido divergente.
+    function detectarDivergencias(info, registroSolus) {
+        const divergencias = [];
+
+        if (registroSolus.cnpj && !validarCNPJ(registroSolus.cnpj)) {
+            divergencias.push(`CNPJ do Solus (${registroSolus.cnpj}) não confere dígito verificador`);
+        }
+
+        if (info.fornecedor && registroSolus.prestador) {
+            const sim = similaridadeTexto(info.fornecedor, registroSolus.prestador);
+            if (sim < 0.75) {
+                divergencias.push(`Nome diverge (${Math.round(sim*100)}% similar): arquivo "${info.fornecedor}" vs Solus "${registroSolus.prestador}"`);
+            }
+        }
+
+        if (info.data && registroSolus.vencimento) {
+            const dataSolus = String(registroSolus.vencimento).trim();
+            if (info.data !== dataSolus) {
+                divergencias.push(`Possível divergência de data: arquivo ${info.data} vs Solus ${dataSolus}`);
+            }
+        }
+
+        // Compara o Valor do Solus com o Valor Líquido do arquivo (tolerância de 1 centavo por arredondamento)
+        if (registroSolus.valor && info.valorLiquido !== undefined && info.valorLiquido !== null) {
+            const diferenca = Math.abs(registroSolus.valor - info.valorLiquido);
+            if (diferenca > 0.01) {
+                divergencias.push(`Valor diverge: arquivo R$ ${info.valorLiquido.toFixed(2)} (líquido) vs Solus R$ ${registroSolus.valor.toFixed(2)}`);
+            }
+        }
+
+        return divergencias;
+    }
+
+    // Cruza os arquivos já CONCILIADOS (chegaram em "Lançados") com os registros do Solus,
+    // usando CNPJ + Nota Fiscal como chave. Detecta 4 situações possíveis.
+    function calcularAuditoriaSolus(chavesFiltradas) {
+        const resultado = [];
+        const solusUsados = new Set();
+
+        chavesFiltradas.forEach(nomeArquivo => {
+            if (!db[nomeArquivo] || db[nomeArquivo].a !== "CONCILIADO") return;
+            const registro = db[nomeArquivo];
+            // Prioriza os dados capturados no momento em que o arquivo entrou na Origem (gravados em
+            // db[n] e no Sheets) — não dependem do nome atual do arquivo, então continuam válidos mesmo
+            // que ele tenha sido renomeado depois. Se não existirem (registro muito antigo), reparseia o nome atual.
+            const info = registro.cnpj ? registro : parseNomeArquivo(nomeArquivo);
+            if (!info || !info.cnpj) return;
+
+            const idxMatch = solusRegistrosAtual.findIndex((r, idx) => !solusUsados.has(idx) && r.cnpj === info.cnpj && r.nf === info.nf);
+
+            if (idxMatch >= 0) {
+                solusUsados.add(idxMatch);
+                const registroSolus = solusRegistrosAtual[idxMatch];
+                const divergencias = detectarDivergencias(info, registroSolus);
+                resultado.push({
+                    arquivo: nomeArquivo, nf: info.nf, fornecedor: info.fornecedor, cnpj: info.cnpj,
+                    status: divergencias.length > 0 ? 'CONCILIADO_COM_ALERTA' : 'CONCILIADO',
+                    divergencias,
+                    valorBruto: info.valorBruto, valorLiquido: info.valorLiquido,
+                    prestadorSolus: registroSolus.prestador, vencimento: registroSolus.vencimento, valor: registroSolus.valor
+                });
+            } else {
+                resultado.push({ arquivo: nomeArquivo, nf: info.nf, fornecedor: info.fornecedor, cnpj: info.cnpj, status: 'NAO_LANCADO', divergencias: [], valorBruto: info.valorBruto, valorLiquido: info.valorLiquido, prestadorSolus: '-', vencimento: '-', valor: 0 });
+            }
+        });
+
+        solusRegistrosAtual.forEach((r, idx) => {
+            if (!solusUsados.has(idx)) {
+                resultado.push({ arquivo: '(sem PDF correspondente)', nf: r.nf, fornecedor: r.prestador, cnpj: r.cnpj, status: 'SEM_ARQUIVO', divergencias: [], prestadorSolus: r.prestador, vencimento: r.vencimento, valor: r.valor });
+            }
+        });
+
+        return resultado;
+    }
+
+    let _auditoriaSolusAtual = [];
+
+    function obterChavesParaAuditoriaSolus() {
+        const dataFiltro = getDataSelecionada();
+        return Object.keys(db).filter(n => !db[n].apagado && db[n].d === dataFiltro);
+    }
+
+    function atualizarPainelSolus() {
+        const chaves = obterChavesParaAuditoriaSolus();
+        _auditoriaSolusAtual = calcularAuditoriaSolus(chaves);
+        const alertas = _auditoriaSolusAtual.filter(a => a.status === 'CONCILIADO_COM_ALERTA' || a.status === 'NAO_LANCADO' || a.status === 'SEM_ARQUIVO').length;
+        const badge = document.getElementById('badge-solus-alertas');
+        if (badge) badge.innerText = alertas;
+        atualizarTabelaSolus();
+    }
+
+    function atualizarTabelaSolus() {
+        const corpo = document.getElementById('tabela-solus-corpo');
+        if (!corpo) return;
+
+        if (!conexoes["SOLUS"]) {
+            corpo.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:50px; color:#94a3b8; font-style: italic;">Conecte a pasta "Relatório Solus" para ver a conciliação.</td></tr>`;
+            return;
+        }
+        if (_auditoriaSolusAtual.length === 0) {
+            corpo.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:50px; color:#94a3b8; font-style: italic;">Nenhum item conciliado no dia selecionado para cruzar com o Solus.</td></tr>`;
+            return;
+        }
+
+        const statusInfo = {
+            'CONCILIADO': { classe: 'st-solus-ok', label: '✅ Conciliado' },
+            'CONCILIADO_COM_ALERTA': { classe: 'st-solus-alerta', label: '⚠️ Alerta' },
+            'NAO_LANCADO': { classe: 'st-solus-nao-lancado', label: '❌ Não Lançado' },
+            'SEM_ARQUIVO': { classe: 'st-solus-sem-arquivo', label: '🚫 Sem Arquivo' }
+        };
+
+        corpo.innerHTML = _auditoriaSolusAtual.map(item => {
+            const info = statusInfo[item.status] || { classe: '', label: item.status };
+            const divergenciasHtml = item.divergencias.length > 0
+                ? item.divergencias.map(d => `<span class="divergencia-item">⚠️ ${d}</span>`).join('')
+                : (item.status === 'CONCILIADO' ? '<span style="color:#2e7d32; font-size:0.7rem;">Nenhuma</span>' : '-');
+
+            return `<tr>
+                <td><strong>${item.nf || '-'}</strong><br><span style="font-size:0.7rem; color:#64748b;">${item.cnpj || '-'}</span></td>
+                <td>${item.arquivo}<br><span style="font-size:0.7rem; color:#64748b;">${item.fornecedor}</span></td>
+                <td style="text-align:center"><span class="badge ${info.classe}">${info.label}</span></td>
+                <td style="text-align:center; font-size:0.75rem;">${item.prestadorSolus}<br>${item.vencimento !== '-' ? 'Venc: ' + item.vencimento : ''}${item.valor ? '<br>R$ ' + Number(item.valor).toFixed(2) : ''}
+                    ${(item.valorBruto !== undefined && item.valorLiquido !== undefined) ? `<br><span style="color:#94a3b8; font-size:0.65rem;">Arq: R$ ${item.valorBruto?.toFixed(2)} / R$ ${item.valorLiquido?.toFixed(2)}</span>` : ''}</td>
+                <td>${divergenciasHtml}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    function mostrarAba(nome) {
+        const paineis = { lancamentos: document.getElementById('painel-lancamentos'), asten: document.getElementById('painel-asten'), solus: document.getElementById('painel-solus') };
+        const botoes = { lancamentos: document.getElementById('tab-btn-lancamentos'), asten: document.getElementById('tab-btn-asten'), solus: document.getElementById('tab-btn-solus') };
+        const cores = { lancamentos: '#1b5e20', asten: '#c62828', solus: '#ad1457' };
+
+        for (let key in paineis) {
+            const ativo = key === nome;
+            paineis[key].style.display = ativo ? 'block' : 'none';
+            botoes[key].style.background = ativo ? cores[key] : 'transparent';
+            botoes[key].style.color = ativo ? 'white' : cores[key];
+            botoes[key].style.borderColor = cores[key];
+            if (ativo) botoes[key].classList.remove('btn-outline'); else botoes[key].classList.add('btn-outline');
+        }
+
+        if (nome === 'asten') atualizarTabelaAsten();
+        if (nome === 'solus') atualizarTabelaSolus();
+    }
+
+    // --- MOTOR DE PROCESSAMENTO OTIMIZADO ---
+    async function processar() {
+        let algumaConectada = Object.values(conexoes).some(h => h !== null);
+        if (!algumaConectada) return;
+        if (isProcessing) return;
+
+        isProcessing = true;
+        const dataAlvo = getDataSelecionada();
+        const now = Date.now();
+        let houveMudanca = false;
+
+        const hojeIso = getHojeISO();
+        const dataAlvoIso = document.getElementById('data-historico').value || hojeIso;
+        const ehHoje = dataAlvoIso === hojeIso;
+        // Fora do modo "pendências", só mexe nas pastas ao vivo (Origem/Equipe/Final) se for hoje.
+        // Datas passadas usam só o que já está salvo (IndexedDB / Sheets) — ver aoTrocarData().
+        const modoConsultaHistorico = !modoPendentesGlobais && !ehHoje;
+
+        try {
+            // Asten e Solus são relatórios fixos (1 arquivo por dia) — dá pra ler mesmo numa data passada
+            astenEsperadosAtual = await obterEsperadosAsten(dataAlvoIso);
+            solusRegistrosAtual = await obterRegistrosSolus(dataAlvoIso);
+
+            if (!modoConsultaHistorico) {
+                const filesO = await obterArquivosPasta(conexoes["ORIGEM"], "ORIGEM");
+                const filesF = await obterArquivosPasta(conexoes["FINAL"], "FINAL");
+
+                let filesColabs = {};
+                const equipe = ["DANIELA", "NATALIA", "QUELITA", "TEREZINHA"];
+                for(let colab of equipe) {
+                    if(conexoes[colab]) {
+                        filesColabs[colab] = await obterArquivosPasta(conexoes[colab], colab);
+                    }
+                }
+
+                for (let f of filesO) {
+                    if (!db[f]) {
+                        // Extrai NF/CNPJ/fornecedor/valores do nome do arquivo AGORA, no momento em que ele
+                        // entra na Origem — antes de qualquer renomeação que possa acontecer mais adiante no fluxo.
+                        const infoOrigem = parseNomeArquivo(f);
+                        db[f] = {
+                            h: getAgoraHR(), ts_in: now, ts_colab: null, ts_out: null, d: dataAlvo, f: "NA ORIGEM", a: "AGUARDANDO", resp: "-", t: classificarTipo(f), aoVivo: true,
+                            astenBaixado: astenEsperadosAtual.has(f), astenBaixadoEm: astenEsperadosAtual.has(f) ? getAgoraHR() : null,
+                            nf: infoOrigem?.nf || '', cnpj: infoOrigem?.cnpj || '', fornecedor: infoOrigem?.fornecedor || '',
+                            unidade: infoOrigem?.unidade || '', formaPagamento: infoOrigem?.formaPagamento || '',
+                            valorBruto: infoOrigem?.valorBruto, valorLiquido: infoOrigem?.valorLiquido, data: infoOrigem?.data || ''
+                        };
+                        houveMudanca = true;
+                        filaSincronizacao.add(f);
+                        filaOrigemSincronizacao.add(f);
+                    }
+                }
+
+                for (let colab in filesColabs) {
+                    for(let f of filesColabs[colab]) {
+                        if (!db[f]) {
+                            db[f] = { h: getAgoraHR(), ts_in: now, ts_colab: now, ts_out: null, d: dataAlvo, f: `COM ${colab}`, a: "EM ANDAMENTO", resp: colab, t: classificarTipo(f), aoVivo: true };
+                            houveMudanca = true;
+                            filaSincronizacao.add(f);
+                        }
+                    }
+                }
+
+                for (let f of filesF) {
+                    if (!db[f]) {
+                        db[f] = { h: getAgoraHR(), ts_in: now, ts_colab: null, ts_out: now, d: dataAlvo, f: "DIRETO", a: "CONCILIADO", resp: "-", t: classificarTipo(f), aoVivo: true };
+                        houveMudanca = true;
+                        filaSincronizacao.add(f);
+                    }
+                }
+
+                for (let n in db) {
+                    if (db[n].apagado) continue;
+                    // Nunca mexe em registro que veio do Sheets (histórico de outro dispositivo) e não está sendo monitorado ao vivo agora
+                    if (db[n].fonteSheet && !db[n].aoVivo) continue;
+                    // Nunca mexe num item já finalizado (CONCILIADO) de outro dia — evita apagar histórico
+                    if (db[n].d !== dataAlvo && db[n].a === "CONCILIADO") continue;
+                    // Fora do modo pendências, só reconcilia o dia selecionado (que aqui é sempre hoje)
+                    if (!modoPendentesGlobais && db[n].d !== dataAlvo) continue;
+
+                    let estaNaOrigem = filesO.has(n);
+                    let estaNoFinal = filesF.has(n);
+
+                    let nomeColabAtual = null;
+                    for (let colab in filesColabs) {
+                        if(filesColabs[colab].has(n)) { nomeColabAtual = colab; break; }
+                    }
+
+                    let statusAntigo = db[n].a;
+                    let fluxoAntigo = db[n].f;
+
+                    if (conexoes["FINAL"]) {
+                        if (estaNoFinal) {
+                            if (db[n].a !== "CONCILIADO") {
+                                db[n].a = "CONCILIADO";
+                                db[n].ts_out = now;
+                                if(db[n].f !== "DIRETO" && db[n].f !== "CIENTE (MANOEL)") {
+                                    db[n].f = "FINALIZADO";
+                                }
+                                db[n].d = dataAlvo;
+                                db[n].h_fim = getAgoraHR();
+                            }
+                        } else {
+                            if (db[n].a === "CONCILIADO") {
+                                if (db[n].f === "DIRETO" || db[n].f === "CIENTE (MANOEL)") {
+                                    delete db[n];
+                                    houveMudanca = true;
+                                    continue;
+                                } else {
+                                    db[n].a = "EM ANDAMENTO";
+                                    db[n].ts_out = null;
+                                    db[n].f = db[n].resp !== "-" ? `RECORTADO (${db[n].resp})` : "RECORTADO (DA ORIGEM)";
+                                }
+                            }
+                        }
+                    }
+
+                    if (db[n].a !== "CONCILIADO") {
+                        if (nomeColabAtual) {
+                            if (db[n].resp !== "-" && db[n].resp !== nomeColabAtual) {
+                                db[n].repasse = `Pego de ${db[n].resp}`;
+                            }
+
+                            if (db[n].f !== `COM ${nomeColabAtual}`) {
+                                db[n].ts_colab = now;
+                            }
+                            db[n].f = `COM ${nomeColabAtual}`;
+                            db[n].a = "EM ANDAMENTO";
+                            db[n].resp = nomeColabAtual;
+                        } else if (estaNaOrigem) {
+                            db[n].f = "NA ORIGEM";
+                            db[n].a = "AGUARDANDO";
+                        } else {
+                            let checkOrigem = conexoes["ORIGEM"] !== null;
+                            let checkColabs = Object.values(filesColabs).length > 0;
+                            if (checkOrigem || checkColabs) {
+                                if (db[n].f === "NA ORIGEM" || db[n].f.startsWith("COM ")) {
+                                     db[n].f = db[n].resp !== "-" ? `RECORTADO (${db[n].resp})` : "RECORTADO (DA ORIGEM)";
+                                }
+                            }
+                        }
+                    }
+
+                    if (statusAntigo !== db[n].a || fluxoAntigo !== db[n].f) {
+                        houveMudanca = true;
+                        filaSincronizacao.add(n);
+                    }
+                }
+            }
+
+            if (houveMudanca) {
+                await dbEngine.save(db);
+                atualizarTela();
+                processarFilaSincronizacao();
+            }
+            atualizarPainelAsten();
+            atualizarPainelSolus();
+
+            document.getElementById('w-time').innerText = getAgoraHR();
+
+        } catch(err) {
+            if (err.message === "PERMISSAO_REVOGADA") {
+                clearInterval(monitorInterval);
+                document.getElementById('status-dot').className = "dot dot-warning";
+                document.getElementById('status-text').innerText = "CONEXÃO PAUSADA";
+
+                conexoes[err.ref] = null;
+                atualizarBotoesVisuais(err.ref);
+                console.warn(`O monitor pausou porque a pasta [${err.ref}] desconectou.`);
+            } else {
+                console.error("Falha:", err);
+            }
+        } finally {
+            isProcessing = false;
+        }
+    }
+
+    async function darCiencia(nome) {
+        if(db[nome]) {
+            db[nome].f = "CIENTE (MANOEL)";
+            await dbEngine.save(db);
+            atualizarTela();
+            filaSincronizacao.add(nome);
+            processarFilaSincronizacao();
+        }
+    }
+
+    async function darCienciaEmTudo() {
+        let alterou = false;
+        const dataFiltro = getDataSelecionada();
+        for(let n in db) {
+            let noFiltro = modoPendentesGlobais ? (db[n].a !== "CONCILIADO") : (db[n].d === dataFiltro);
+            if(!db[n].apagado && db[n].f === 'DIRETO' && noFiltro) {
+                db[n].f = 'CIENTE (MANOEL)';
+                alterou = true;
+                filaSincronizacao.add(n);
+            }
+        }
+        if(alterou) {
+            await dbEngine.save(db);
+            atualizarTela();
+            processarFilaSincronizacao();
+        } else {
+            alert("Não há lançamentos DIRETOS pendentes.");
+        }
+    }
+
+    function toggleCheckAll() {
+        const checkAll = document.getElementById('checkAll');
+        const checkboxes = document.querySelectorAll('.chk-item');
+        checkboxes.forEach(chk => chk.checked = checkAll.checked);
+    }
+
+    async function excluirSelecionados() {
+        const checkboxes = document.querySelectorAll('.chk-item:checked');
+        if(checkboxes.length === 0) {
+            alert("Nenhum arquivo selecionado. Marque as caixas dos arquivos que deseja excluir.");
+            return;
+        }
+
+        if(confirm(`Tem certeza que deseja excluir permanentemente ${checkboxes.length} arquivo(s) selecionado(s)?`)) {
+            checkboxes.forEach(chk => {
+                const nome = chk.value;
+                if(db[nome]) {
+                    db[nome].apagado = true;
+                    filaSincronizacao.add(nome);
+                }
+            });
+            await dbEngine.save(db);
+            atualizarTela();
+            processarFilaSincronizacao();
+            document.getElementById('checkAll').checked = false;
+        }
+    }
+
+    // --- RENDERIZAÇÃO DA TELA ---
+    function atualizarTela() {
+        const corpo = document.getElementById('tabela-corpo');
+        const now = Date.now();
+        let ok = 0, p = 0;
+        let cP = 0, cS = 0, cJ = 0, cA = 0, cO = 0;
+        let contagemEquipe = { "DANIELA": 0, "NATALIA": 0, "QUELITA": 0, "TEREZINHA": 0 };
+
+        const dataFiltro = getDataSelecionada();
+        const chavesFiltradas = Object.keys(db).filter(n => !db[n].apagado && (modoPendentesGlobais ? db[n].a !== "CONCILIADO" : db[n].d === dataFiltro));
+
+        chavesFiltradas.sort((a, b) => db[b].h.localeCompare(db[a].h));
+
+        const tot = chavesFiltradas.length;
+        let htmlConteudo = "";
+
+        chavesFiltradas.forEach(n => {
+            const r = db[n];
+            if(r.a === "CONCILIADO") ok++; else p++;
+
+            if(r.t === 'PRODUTO') cP++; else if(r.t === 'SERVIÇO') cS++; else if(r.t === 'JURIDICO') cJ++; else if(r.t === 'ASSISTENCIAL') cA++; else cO++;
+            if(contagemEquipe[r.resp] !== undefined) contagemEquipe[r.resp]++;
+
+            const isDireto = r.f === 'DIRETO';
+            const isManoel = r.f === 'CIENTE (MANOEL)';
+            const isRecortado = r.f.includes('RECORTADO');
+            const isComColab = r.f.startsWith('COM ');
+
+            let catC = 'file-outro';
+            if(r.t === 'PRODUTO') catC = 'file-prod'; else if(r.t === 'SERVIÇO') catC = 'file-serv'; else if(r.t === 'JURIDICO') catC = 'file-juri'; else if(r.t === 'ASSISTENCIAL') catC = 'file-assi';
+
+            let statusAudit = r.a === "CONCILIADO" ? "st-ok" : (r.a === "EM ANDAMENTO" ? "st-transito" : "st-na-pasta");
+            let badgeFluxoClass = 'st-na-pasta';
+            if (isDireto) badgeFluxoClass = 'st-direto'; else if (isManoel) badgeFluxoClass = 'st-manoel'; else if (isRecortado) badgeFluxoClass = 'st-recortado'; else if (isComColab) badgeFluxoClass = 'st-colab'; else if (r.f === 'FINALIZADO') badgeFluxoClass = 'st-ok';
+
+            let exibeData = ` <br><span style="color:${modoPendentesGlobais ? '#ef6c00' : '#8b949e'}; font-size:0.55rem; font-weight: 600;">(${r.d})</span>`;
+
+            let btnCiencia = (isDireto) ? `<div style="margin-top:4px;"><button class="btn-ciencia" onclick="darCiencia('${n}')">✓ Dar Ciência</button></div>` : '';
+
+            let blocoSLA = "-";
+            let classeLinha = "";
+
+            if (r.a === "CONCILIADO" && r.ts_in && r.ts_out) {
+                let msSLA = calcularSLA(r.ts_in, r.ts_out);
+                blocoSLA = `<div class="sla-box">⏱️ SLA: ${formatarTempoSLA(msSLA)}</div>`;
+            } else if (r.a === "CONCILIADO" && r.slaMinutosSalvo) {
+                blocoSLA = `<div class="sla-box">⏱️ SLA: ${r.slaMinutosSalvo}m</div>`;
+            } else if (r.a === "EM ANDAMENTO" && r.ts_colab) {
+                let tempoParado = now - r.ts_colab;
+                if (tempoParado > IDLE_LIMIT_MS) {
+                    classeLinha = "row-idle";
+                    blocoSLA = `<div class="sla-box sla-idle" title="Gargalo detetado!">⚠️ Parado há ${formatarTempoSLA(tempoParado)}</div>`;
+                } else {
+                    blocoSLA = `<div class="sla-box" style="color:#64748b">⏳ Em progresso</div>`;
+                }
+            }
+
+            htmlConteudo += `<tr class="${classeLinha}">
+                <td style="color: inherit; font-size:0.7rem; padding-top:12px; padding-bottom:12px;">${r.h}${exibeData}</td>
+                <td style="text-align:center;">
+                    <input type="checkbox" class="chk-item" value="${n}">
+                </td>
+                <td>
+                    <div style="display:flex; gap:8px; align-items:flex-start;">
+                        <div class="file-entry ${isDireto ? 'file-direto' : catC}"><span class="tag-small">${r.t}</span>${n}</div>
+                    </div>
+                    ${btnCiencia}
+                </td>
+                <td style="text-align:center; font-weight:700; font-size:0.75rem; color:${r.resp === '-' ? '#94a3b8' : '#8e44ad'};">${r.resp}</td>
+                <td style="text-align:center"><span class="badge ${badgeFluxoClass}">${r.f}</span></td>
+                <td style="text-align:center"><span class="badge ${statusAudit}">${r.a}</span></td>
+                <td style="text-align:center">${blocoSLA}</td>
+            </tr>`;
+        });
+
+        if (tot === 0) {
+            corpo.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:50px; color:${modoPendentesGlobais ? '#4caf50' : '#94a3b8'}; font-weight:${modoPendentesGlobais ? 'bold' : 'normal'}; font-style: ${modoPendentesGlobais ? 'normal' : 'italic'};">${modoPendentesGlobais ? '🎉 Nenhuma pendência encontrada!' : 'Clique nos botões de conexão acima para iniciar a auditoria...'}</td></tr>`;
+        } else {
+            corpo.innerHTML = htmlConteudo;
+        }
+
+        document.getElementById('v-total').innerText = tot;
+        document.getElementById('v-pend').innerText = p;
+        document.getElementById('v-ok').innerText = ok;
+        document.getElementById('v-perc').innerText = tot > 0 ? Math.round((ok/tot)*100) + "%" : "0%";
+        document.getElementById('w-prod').innerText = cP; document.getElementById('w-serv').innerText = cS; document.getElementById('w-juri').innerText = cJ; document.getElementById('w-assi').innerText = cA; document.getElementById('w-outr').innerText = cO;
+        document.getElementById('qtd-DANIELA').innerText = contagemEquipe["DANIELA"]; document.getElementById('qtd-NATALIA').innerText = contagemEquipe["NATALIA"]; document.getElementById('qtd-QUELITA').innerText = contagemEquipe["QUELITA"]; document.getElementById('qtd-TEREZINHA').innerText = contagemEquipe["TEREZINHA"];
+
+        if (document.getElementById('dashboard-container').style.display !== 'none') {
+            renderizarDashboard();
+        }
+    }
+
+    function exportar() {
+        const dataFiltro = getDataSelecionada();
+        let csv = `Relatório do Dia: ${dataFiltro}\nProtocolo;Data;Tipo;Arquivo;Responsavel;Fluxo_Interno;Status_Final;SLA_Mins\n`;
+
+        const chavesFiltradas = Object.keys(db).filter(n => !db[n].apagado && (modoPendentesGlobais ? db[n].a !== "CONCILIADO" : db[n].d === dataFiltro));
+
+        chavesFiltradas.sort((a, b) => db[a].h.localeCompare(db[b].h));
+
+        chavesFiltradas.forEach(n => {
+            let r = db[n];
+            let minsSLA = (r.a === "CONCILIADO" && r.ts_in && r.ts_out) ? Math.floor(calcularSLA(r.ts_in, r.ts_out) / 60000) : (r.slaMinutosSalvo || "");
+            csv += `${r.h};${r.d};${r.t};${n};${r.resp || ''};${r.f};${r.a};${minsSLA}\n`;
+        });
+
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' }));
+        a.download = `Dashboard_Equipa_${document.getElementById('data-historico').value || getHojeISO()}.csv`;
+        a.click();
+    }
+
+    async function limparDB() {
+        if(confirm("ATENÇÃO: Deseja apagar permanentemente todo o histórico do banco de dados (IndexedDB)?")) {
+            db = {};
+            await dbEngine.clear();
+            atualizarTela();
+            atualizarPainelSolus();
+        }
+    }
+</script>
+</body>
+</html>

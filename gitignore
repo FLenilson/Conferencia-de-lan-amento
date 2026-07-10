@@ -1,0 +1,2 @@
+# Credenciais reais (URL do Apps Script + token). Nunca deve ir para o Git.
+config.local.js
