@@ -195,7 +195,7 @@
         <div class="widget-item caixa-filtro tipo-badge" id="w-item-assi" onclick="aplicarFiltroCaixa('tipo','ASSISTENCIAL')" title="Filtrar por Assistencial" style="background:#e74c3c; color:#fff; --cor-badge:#e74c3c;">ASSISTENCIAL: <span id="w-assi">0</span></div>
         <div class="widget-item caixa-filtro tipo-badge" id="w-item-outr" onclick="aplicarFiltroCaixa('tipo','OUTRO')" title="Filtrar por Outros" style="background:#7f8c8d; color:#fff; --cor-badge:#7f8c8d;">OUTROS: <span id="w-outr">0</span></div>
         <div style="color: #94a3b8">Ref: <span id="w-time">--:--:--</span></div>
-        <div id="sp-status-indicator" style="font-size: 0.78rem; font-weight: 700; margin-top: 4px;">⚪ Fora do SharePoint (salvando só localmente)</div>
+        <div id="sp-status-indicator" onclick="abrirConfigPlanilha()" title="Clique para configurar a planilha Google" style="font-size: 0.78rem; font-weight: 700; margin-top: 4px; cursor:pointer;">⚪ Fora do SharePoint (salvando só localmente)</div>
     </div>
     <div class="status-pill"><div id="status-dot" class="dot"></div><span id="status-text">STANDBY</span></div>
     <div class="logo-slot"><span class="slot-logo" data-h="38"></span><button class="btn-logo" onclick="escolherLogo()" title="Trocar a logo exibida no sistema e em todos os relatórios">🖼</button></div>
@@ -270,6 +270,7 @@
             <div class="conexao-bar">
                 <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">1. ENTRADA</span>
                 <button id="btn-conn-ORIGEM" class="btn-conn conn-origem" onclick="conectarPasta('ORIGEM')">📥 Origem</button>
+                <button class="btn-conn" style="background:#E6F4EE; border-color:#00995D; color:#0A5F55; font-weight:800;" onclick="abrirConfigPlanilha()" title="Endereço do Apps Script e token da planilha Google">📗 Planilha Google</button>
                 <button id="btn-conn-DEVOLVIDOS" class="btn-conn" style="background:#FFF3E8; border-color:#F47920; color:#B4500F;" onclick="conectarPasta('DEVOLVIDOS')" title="Conecte a pasta onde as colaboradoras colocam os documentos devolvidos (ex.: _DEVOLVIDOS). Pode ficar em qualquer lugar da rede.">↩️ Devolvidos</button>
                 <button id="btn-conn-ASTEN" class="btn-conn" style="background:#fff8e1; border-color:#f9a825; color:#8d6e00;" onclick="conectarPasta('ASTEN')" title="Pasta onde ficam os relatórios Excel da Asten, salvos por dia">📊 Relatório Asten</button>
 
@@ -389,7 +390,7 @@
 </div>
 
 <footer class="footer">
-    Desenvolvido por <strong>Manoel Santana Adaptado por Sumprimentos</strong> | Auditoria Equipe (v19.0 — revisão de conferências)
+    Desenvolvido por <strong>Manoel Santana</strong> | Auditoria Equipe (v19.0 — revisão de conferências)
 </footer>
 
 <script>
@@ -626,9 +627,102 @@
     let spStatus = "aguardando";
 
     // --- INTEGRAÇÃO COM GOOGLE SHEETS (via Apps Script Web App) ---
+    // Planilha: 1) config.local.js (rede interna) ou 2) configurada pela própria tela e guardada neste
+    // navegador — necessário no GitHub Pages, onde o config.local.js NÃO vai junto (tem o token).
+    // Também aceita um "link de configuração" (#gs=...) gerado pelo coordenador para a equipe.
+    const GS_KEY = 'monitor_gs_config';
     const GS_CONFIG = Object.assign({ webAppUrl: "", token: "", ativo: false }, _CFG.googleSheets);
+    (function carregarConfigPlanilhaLocal() {
+        try {
+            const m = location.hash.match(/[#&]gs=([^&]+)/);
+            if (m) {
+                const cfg = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1])))));
+                if (cfg && cfg.u && cfg.t) localStorage.setItem(GS_KEY, JSON.stringify({ webAppUrl: cfg.u, token: cfg.t }));
+                history.replaceState(null, '', location.pathname + location.search); // tira o token da barra de endereço
+            }
+        } catch (e) { console.warn('Link de configuração inválido:', e); }
+        if (GS_CONFIG.ativo && GS_CONFIG.webAppUrl) { GS_CONFIG.fonteConfig = 'config.local.js'; return; }
+        try {
+            const salvo = JSON.parse(localStorage.getItem(GS_KEY) || 'null');
+            if (salvo && salvo.webAppUrl && salvo.token) Object.assign(GS_CONFIG, { webAppUrl: salvo.webAppUrl, token: salvo.token, ativo: true, fonteConfig: 'este navegador' });
+        } catch (e) {}
+    })();
 
     // Envio único ao Apps Script (usado no modo individual, para compatibilidade com scripts antigos)
+    function abrirConfigPlanilha() {
+        document.querySelectorAll('.modal-planilha').forEach(e => e.remove());
+        const m = document.createElement('div');
+        m.className = 'modal-planilha';
+        m.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.5); display:flex; align-items:center; justify-content:center; z-index:10000;';
+        const deArquivo = GS_CONFIG.fonteConfig === 'config.local.js';
+        m.innerHTML = `<div style="background:#fff; border-radius:12px; padding:20px; width:min(560px,94vw); border-top:5px solid #00995D; font-size:0.85rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><div style="font-family:Poppins,sans-serif; font-weight:800; color:#0A5F55; font-size:1.05rem;">📗 Planilha Google (Apps Script)</div>${logoHtml(32)}</div>
+            <div style="color:#5B5C65; margin:6px 0 12px;">Necessário para gravar e acompanhar os lançamentos de qualquer computador (inclusive pelo GitHub). Fica salvo só neste navegador.${deArquivo ? '<br><b>Este computador está usando o config.local.js</b>; o que salvar aqui vale quando ele não estiver presente.' : ''}</div>
+            <label style="font-weight:700; color:#0A5F55;">Endereço do Web App (termina em /exec)</label>
+            <input id="cfgGsUrl" value="${esc(GS_CONFIG.webAppUrl || '')}" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e1; border-radius:6px; margin:4px 0 10px;">
+            <label style="font-weight:700; color:#0A5F55;">Token</label>
+            <input id="cfgGsToken" type="password" value="${esc(GS_CONFIG.token || '')}" placeholder="mesmo valor de TOKEN_ESPERADO no Código.gs" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e1; border-radius:6px; margin:4px 0 6px;">
+            <div id="cfgGsMsg" style="min-height:20px; font-weight:700; margin:6px 0;"></div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end;">
+              <button class="btn btn-outline" onclick="testarConfigPlanilha()">🔎 Testar</button>
+              <button class="btn btn-outline" onclick="copiarLinkConfigPlanilha()" title="Gera um link que já configura a planilha no navegador de quem abrir">🔗 Link para a equipe</button>
+              <button class="btn btn-outline" style="color:#c62828; border-color:#c62828;" onclick="removerConfigPlanilha()">Remover</button>
+              <button class="btn btn-outline" onclick="this.closest('.modal-planilha').remove()">Fechar</button>
+              <button class="btn" style="background:#00995D; color:#fff; border:none;" onclick="salvarConfigPlanilha()">Salvar e conectar</button>
+            </div></div>`;
+        document.body.appendChild(m);
+        m.addEventListener('click', ev => { if (ev.target === m) m.remove(); });
+    }
+    function lerCamposPlanilha() {
+        const u = document.getElementById('cfgGsUrl').value.trim(), t = document.getElementById('cfgGsToken').value.trim();
+        const msg = document.getElementById('cfgGsMsg');
+        if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(u)) { msg.style.color = '#c62828'; msg.innerText = 'Endereço inválido: copie a URL do Web App (Implantar → Gerenciar implantações), terminando em /exec.'; return null; }
+        if (!t) { msg.style.color = '#c62828'; msg.innerText = 'Informe o token.'; return null; }
+        return { u, t };
+    }
+    async function testarConfigPlanilha(silencioso) {
+        const c = lerCamposPlanilha(); if (!c) return false;
+        const msg = document.getElementById('cfgGsMsg'); msg.style.color = '#8a6d00'; msg.innerText = '⏳ Testando…';
+        try {
+            const r = await fetch(`${c.u}?token=${encodeURIComponent(c.t)}&fonte=pendentes`);
+            const j = await r.json();
+            if (!j.ok) { msg.style.color = '#c62828'; msg.innerText = '❌ ' + (j.erro || 'A planilha recusou o acesso') + (/token/i.test(j.erro || '') ? ' — confira o token.' : ''); return false; }
+            msg.style.color = '#0A5F55'; msg.innerText = `✅ Conectado — ${(j.registros || []).length} pendência(s) em aberto na planilha.`;
+            return true;
+        } catch (e) {
+            msg.style.color = '#c62828'; msg.innerText = '❌ Sem resposta. Confira a URL e se o Web App está implantado para "Qualquer pessoa".'; return false;
+        }
+    }
+    async function salvarConfigPlanilha() {
+        const c = lerCamposPlanilha(); if (!c) return;
+        if (!(await testarConfigPlanilha())) return;
+        try { localStorage.setItem(GS_KEY, JSON.stringify({ webAppUrl: c.u, token: c.t })); } catch (e) {}
+        Object.assign(GS_CONFIG, { webAppUrl: c.u, token: c.t, ativo: true, fonteConfig: 'este navegador' });
+        _loteGS = null; for (const k in _cacheRemoto) delete _cacheRemoto[k];
+        document.querySelectorAll('.modal-planilha').forEach(e => e.remove());
+        atualizarIndicadorSP('aguardando');
+        // Traz da planilha o que já foi lançado e começa a enviar o que estava só neste navegador
+        Object.keys(db).forEach(n => filaSincronizacao.add(n));
+        try { await carregarDadosRemotosPorData(getDataSelecionada()); } catch (e) {}
+        atualizarTela();
+        carregarDevolucoesRemotas(180); atualizarSemPastas(); processarFilaSincronizacao();
+    }
+    function removerConfigPlanilha() {
+        if (!confirm('Remover a configuração da planilha deste navegador?')) return;
+        try { localStorage.removeItem(GS_KEY); } catch (e) {}
+        if (GS_CONFIG.fonteConfig !== 'config.local.js') Object.assign(GS_CONFIG, { webAppUrl: '', token: '', ativo: false, fonteConfig: '' });
+        document.querySelectorAll('.modal-planilha').forEach(e => e.remove());
+        atualizarIndicadorSP(GS_CONFIG.ativo ? 'ok' : 'offline');
+    }
+    async function copiarLinkConfigPlanilha() {
+        const c = lerCamposPlanilha(); if (!c) return;
+        const cod = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify({ u: c.u, t: c.t })))));
+        const link = location.origin + location.pathname + '#gs=' + cod;
+        const msg = document.getElementById('cfgGsMsg');
+        try { await navigator.clipboard.writeText(link); msg.style.color = '#0A5F55'; msg.innerText = '🔗 Link copiado. Quem abrir já fica conectado. Envie só para a equipe (contém o token).'; }
+        catch (e) { prompt('Copie o link (contém o token — envie só para a equipe):', link); }
+    }
+
     async function enviarGS(payload, rotulo) {
         const resp = await fetch(GS_CONFIG.webAppUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
         if (!resp.ok) throw new Error(`Falha ao gravar ${rotulo || 'registro'} no Google Sheets (${resp.status})`);
@@ -961,7 +1055,7 @@
         const el = document.getElementById('sp-status-indicator');
         if (!el) return;
         const cores = { ok: '#0A5F55', erro: '#c62828', offline: '#78909c', aguardando: '#f9a825' };
-        const textos = { ok: '🟢 Sincronizado', erro: '🔴 Erro ao sincronizar', offline: '⚪ Nenhum destino configurado (salvando só localmente)', aguardando: '🟡 Sincronizando...' };
+        const textos = { ok: '🟢 Sincronizado', erro: '🔴 Erro ao sincronizar', offline: '⚪ Planilha não configurada — clique aqui para conectar', aguardando: '🟡 Sincronizando...' };
         el.style.color = cores[status] || '#78909c';
         el.title = msg || textos[status] || '';
         el.innerText = textos[status] || '';
@@ -1350,6 +1444,9 @@
 
     async function iniciar() {
         renderizarLogos();
+        atualizarIndicadorSP(GS_CONFIG.ativo ? 'ok' : 'offline');
+        // Publicado na web (GitHub Pages) e sem planilha configurada: abre a configuração logo de início
+        if (!GS_CONFIG.ativo && /^https?:$/.test(location.protocol)) setTimeout(abrirConfigPlanilha, 800);
         try { if (localStorage.getItem('monitor_toolbar_recolhida') === '1') alternarToolbar(true); } catch (e) {}
         document.getElementById('data-historico').value = getHojeISO();
         ultimaDataDefinidaPeloSistema = getHojeISO();
