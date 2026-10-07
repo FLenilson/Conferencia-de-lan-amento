@@ -674,9 +674,9 @@
         m.addEventListener('click', ev => { if (ev.target === m) m.remove(); });
     }
     function lerCamposPlanilha() {
-        const u = document.getElementById('cfgGsUrl').value.trim(), t = document.getElementById('cfgGsToken').value.trim();
+        const u = document.getElementById('cfgGsUrl').value.trim().replace(/\/dev$/, '/exec').replace(/[?#].*$/, ''), t = document.getElementById('cfgGsToken').value.trim().replace(/^["']|["']$/g, '');
         const msg = document.getElementById('cfgGsMsg');
-        if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(u)) { msg.style.color = '#c62828'; msg.innerText = 'Endereço inválido: copie a URL do Web App (Implantar → Gerenciar implantações), terminando em /exec.'; return null; }
+        if (!/^https:\/\/script\.google(usercontent)?\.com\/(a\/macros\/[^/]+\/s|macros\/s|a\/[^/]+\/macros\/s)\/[^/]+\/exec$/.test(u)) { msg.style.color = '#c62828'; msg.innerText = 'Endereço inválido: copie a URL do Web App (Implantar → Gerenciar implantações), terminando em /exec.'; return null; }
         if (!t) { msg.style.color = '#c62828'; msg.innerText = 'Informe o token.'; return null; }
         return { u, t };
     }
