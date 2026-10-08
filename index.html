@@ -2134,6 +2134,7 @@
     // arquivo está arquivado em "07.JULHO/07.07", nunca era encontrada. Preenchido uma única vez ao
     // entrar no modo "Localizar Pendências" — não a cada ciclo de 1s, porque são dezenas de pastas.
     let arquivosFinalDatasAntigas = new Set();
+    const _tentDataFinal = {};
     // nome do arquivo -> data (ISO) da subpasta de Lançados onde ele foi realmente encontrado.
     // É essa data que vale para ler o metadado e registrar quando o lançamento foi concluído.
     let pastaOndeAchou = {};
@@ -3797,6 +3798,16 @@
             }
         }
 
+        // Mês/ano ANTES do dia: com pastas de mês numeradas ("07", "10"), ao buscar 07/10 a pasta "07" (JULHO)
+        // casava como "dia 07" e o Monitor listava os arquivos de julho como lançados hoje (virada da meia-noite).
+        if (candidatoMes && candidatoDia !== candidatoMes) {
+            const achouNoMes = await encontrarPastaDoDia(candidatoMes, dataIso, profundidade + 1);
+            if (achouNoMes) return achouNoMes;
+        }
+        if (candidatoAno) {
+            const achouNoAno = await encontrarPastaDoDia(candidatoAno, dataIso, profundidade + 1);
+            if (achouNoAno) return achouNoAno;
+        }
         if (candidatoDia) {
             // Uma pasta como "07.JULHO" casa tanto como DIA quanto como MÊS quando a data é 07/07
             // (dia igual ao número do mês). Antes, ela era aceita direto como pasta do dia e a busca
@@ -3807,14 +3818,6 @@
                 if (maisFundo) return maisFundo;
             }
             return candidatoDia;
-        }
-        if (candidatoMes) {
-            const achouNoMes = await encontrarPastaDoDia(candidatoMes, dataIso, profundidade + 1);
-            if (achouNoMes) return achouNoMes;
-        }
-        if (candidatoAno) {
-            const achouNoAno = await encontrarPastaDoDia(candidatoAno, dataIso, profundidade + 1);
-            if (achouNoAno) return achouNoAno;
         }
         // Nenhuma pasta de ano/mês/dia encontrada neste nível — tenta atravessar pastas "genéricas"
         // (sem nome de data) antes de desistir, caso exista uma camada de categoria no meio do caminho
@@ -4106,7 +4109,13 @@
                     }
                 }
             }
-            if (!arquivoAlvo) { astenFonteRemota = false; return new Set(); }
+            if (!arquivoAlvo) {
+                // Pasta conectada, mas sem o relatório desta data (ou salvo em outra pasta por outro computador):
+                // usa o retrato da planilha em vez de mostrar 0/0 e marcar tudo como "Asten —".
+                const remoto = await buscarAstenSnapshotRemoto(dataAlvoIso);
+                astenFonteRemota = remoto.size > 0;
+                return remoto;
+            }
 
             const file = await arquivoAlvo.getFile();
             if (_astenCache.dataIso === dataAlvoIso && _astenCache.nomeArquivo === arquivoAlvo.name && _astenCache.mtime === file.lastModified) {
@@ -4126,8 +4135,8 @@
             return nomes;
         } catch (e) {
             console.error("Erro ao ler o relatório Asten:", e);
-            astenFonteRemota = false;
-            return new Set();
+            try { const remoto = await buscarAstenSnapshotRemoto(dataAlvoIso); astenFonteRemota = remoto.size > 0; return remoto; }
+            catch (e2) { astenFonteRemota = false; return new Set(); }
         }
     }
 
@@ -4181,7 +4190,7 @@
             return;
         }
 
-        const avisoRemoto = astenFonteRemota ? `<tr><td colspan="2" style="text-align:center; padding:8px; color:#f9a825; font-size:0.75rem; font-style:italic;">📡 Exibindo dados sincronizados da planilha (pasta Asten não conectada nesta máquina)</td></tr>` : '';
+        const avisoRemoto = astenFonteRemota ? `<tr><td colspan="2" style="text-align:center; padding:8px; color:#f9a825; font-size:0.75rem; font-style:italic;">📡 Exibindo dados sincronizados da planilha (relatório Asten desta data não está na pasta conectada nesta máquina)</td></tr>` : '';
         corpo.innerHTML = avisoRemoto + astenPendentesAtual.map(nome => `
             <tr>
                 <td>${esc(nome)}</td>
@@ -4872,6 +4881,11 @@
                             // "agora" — reflete quando ele realmente chegou em Lançados, não quando o app
                             // percebeu (que pode ser bem depois, se o app ficou fechado até então).
                             const dataRealMs = f in datasReaisNovosPreCarregadas ? datasReaisNovosPreCarregadas[f] : await obterDataRealDoArquivo(conexoes["FINAL"], f, dataAlvoIso);
+                            // Sem a data real do arquivo, NÃO registra de cara como "lançado agora": tenta de novo
+                            // nos próximos ciclos (rede lenta, virada da meia-noite). Antes, documentos antigos
+                            // entravam como DIRETO às 00:00 do dia seguinte e inflavam o dia.
+                            if (!dataRealMs) { _tentDataFinal[f] = (_tentDataFinal[f] || 0) + 1; if (_tentDataFinal[f] < 5) continue; }
+                            delete _tentDataFinal[f];
                             const momentoRealNovo = dataRealMs || now;
                             const { d: dRealNovo, h: hRealNovo } = formatarDataHoraDeTimestamp(momentoRealNovo);
                             const fluxoInicial = respDetectado !== '-' ? "FINALIZADO" : "DIRETO";
