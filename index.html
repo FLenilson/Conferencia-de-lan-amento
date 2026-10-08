@@ -659,9 +659,9 @@
             <div style="display:flex; justify-content:space-between; align-items:center;"><div style="font-family:Poppins,sans-serif; font-weight:800; color:#0A5F55; font-size:1.05rem;">📗 Planilha Google (Apps Script)</div>${logoHtml(32)}</div>
             <div style="color:#5B5C65; margin:6px 0 12px;">Necessário para gravar e acompanhar os lançamentos de qualquer computador (inclusive pelo GitHub). Fica salvo só neste navegador.${deArquivo ? '<br><b>Este computador está usando o config.local.js</b>; o que salvar aqui vale quando ele não estiver presente.' : ''}</div>
             <label style="font-weight:700; color:#0A5F55;">Endereço do Web App (termina em /exec)</label>
-            <input id="cfgGsUrl" value="${esc(GS_CONFIG.webAppUrl || '')}" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e1; border-radius:6px; margin:4px 0 10px;">
+            <input id="cfgGsUrl" value="${esc(GS_CONFIG.webAppUrl || '')}" placeholder="Cole aqui o link do Web App (Apps Script → Implantar → Gerenciar implantações)" autocomplete="off" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e1; border-radius:6px; margin:4px 0 10px;">
             <label style="font-weight:700; color:#0A5F55;">Token</label>
-            <input id="cfgGsToken" type="password" value="${esc(GS_CONFIG.token || '')}" placeholder="mesmo valor de TOKEN_ESPERADO no Código.gs" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e1; border-radius:6px; margin:4px 0 6px;">
+            <div style="display:flex; gap:6px; margin:4px 0 6px;"><input id="cfgGsToken" type="password" autocomplete="new-password" value="${esc(GS_CONFIG.token || '')}" placeholder="valor de TOKEN_ESPERADO no Código.gs (linha 2)" style="flex:1; box-sizing:border-box; padding:8px; border:1px solid #cbd5e1; border-radius:6px;"><button type="button" class="btn btn-outline" style="padding:4px 10px;" title="Mostrar/ocultar o token" onclick="const i=document.getElementById('cfgGsToken'); i.type = i.type==='password' ? 'text' : 'password';">👁</button></div>
             <div id="cfgGsMsg" style="min-height:20px; font-weight:700; margin:6px 0;"></div>
             <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end;">
               <button class="btn btn-outline" onclick="testarConfigPlanilha()">🔎 Testar</button>
@@ -676,6 +676,8 @@
     function lerCamposPlanilha() {
         const u = document.getElementById('cfgGsUrl').value.trim().replace(/\/dev$/, '/exec').replace(/[?#].*$/, ''), t = document.getElementById('cfgGsToken').value.trim().replace(/^["']|["']$/g, '');
         const msg = document.getElementById('cfgGsMsg');
+        if (!u) { msg.style.color = '#c62828'; msg.innerText = 'O campo "Endereço do Web App" está vazio. Abra a planilha → Extensões → Apps Script → Implantar → Gerenciar implantações, copie o URL do App da Web e cole aqui.'; return null; }
+        if (/docs\.google\.com\/spreadsheets/.test(u)) { msg.style.color = '#c62828'; msg.innerText = 'Esse é o link da PLANILHA. Aqui vai o link do Web App do Apps Script (começa com https://script.google.com e termina em /exec).'; return null; }
         if (!/^https:\/\/script\.google(usercontent)?\.com\/(a\/macros\/[^/]+\/s|macros\/s|a\/[^/]+\/macros\/s)\/[^/]+\/exec$/.test(u)) { msg.style.color = '#c62828'; msg.innerText = 'Endereço inválido: copie a URL do Web App (Implantar → Gerenciar implantações), terminando em /exec.'; return null; }
         if (!t) { msg.style.color = '#c62828'; msg.innerText = 'Informe o token.'; return null; }
         return { u, t };
@@ -803,8 +805,11 @@
     }
     function situacaoDevolucao(item, k) {
         const ev = item.devolucoes[k], ultima = k === item.devolucoes.length - 1;
+        if (ev.cancelado) return 'CANCELADO (SEM SUBSTITUTO)';
+        if (ev.substituido) return 'SUBSTITUÍDO';
         if (ev.corrigidoEm) return 'CORRIGIDO';
         if (ultima && item.naPastaDevolvidos) return 'AGUARDANDO CORREÇÃO';
+        if (ultima && item.aguardandoSubst) return 'AGUARDANDO SUBSTITUIÇÃO';
         if (!ultima) return 'DEVOLVIDO NOVAMENTE DEPOIS';
         if (item.a === 'CONCILIADO') return 'LANÇADO';
         return item.f === 'NA ORIGEM' ? 'NA ORIGEM' : 'RETORNOU AO FLUXO';
@@ -812,7 +817,9 @@
     function payloadDevolucao(nome, item, k) {
         const ev = item.devolucoes[k], info = infoDoItem(nome);
         const hm = ts => ts ? new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '';
-        const chave = chaveDocumento(nome, item);
+        // Chave de quando a devolução aconteceu: se o arquivo foi renomeado/substituído (NF nova), a linha da
+        // planilha é ATUALIZADA em vez de ganhar uma segunda devolução duplicada com a chave nova.
+        const chave = ev.chaveOriginal || chaveDocumento(nome, item);
         const payload = {
             token: GS_CONFIG.token,
             tipoRegistro: 'devolucao',
@@ -860,7 +867,8 @@
                 const em = Number(r.em) || 0; if (!r.arquivo || !em) return;
                 (porArquivo[r.arquivo] = porArquivo[r.arquivo] || []).push({
                     de: r.devolvido_por || 'NÃO IDENTIFICADA', em, d: r.data || dataBrDe(em), motivo: r.motivo || '', obs: r.observacao || '',
-                    motivoDaPasta: r.motivo_via_pasta === 'SIM', renomeadoDe: r.renomeado_de || undefined,
+                    motivoDaPasta: r.motivo_via_pasta === 'SIM', renomeadoDe: r.renomeado_de || undefined, chaveOriginal: r.chave_documento || undefined,
+                    substituido: r.situacao === 'SUBSTITUÍDO' || undefined, cancelado: /^CANCELADO/.test(r.situacao || '') || undefined,
                     tempoComColabMin: r.tempo_com_colab_min === '' || r.tempo_com_colab_min == null ? null : Number(r.tempo_com_colab_min),
                     corrigidoEm: Number(r.corrigido_em_ts) || undefined, tempoCorrecaoMin: r.tempo_correcao_min === '' || r.tempo_correcao_min == null ? undefined : Number(r.tempo_correcao_min)
                 });
@@ -927,6 +935,7 @@
 
             (json.registros || []).forEach(reg => {
                 const existente = db[reg.arquivo];
+                if (!reg.apagado && !arquivoValido(reg.arquivo)) filaSincronizacao.add(reg.arquivo); // temporário de download: some da planilha
                 if (existente && existente.aoVivo) return; // nunca sobrescreve o que está sendo monitorado ao vivo hoje
 
                 // Reconstrói o instante de entrada a partir da data+hora que a própria planilha traz.
@@ -950,7 +959,7 @@
                     resp: reg.responsavel || '-',
                     f: reg.fluxo || '-',
                     a: reg.status || 'AGUARDANDO',
-                    apagado: !!reg.apagado,
+                    apagado: !!reg.apagado || !arquivoValido(reg.arquivo),
                     slaMinutosSalvo: reg.sla_minutos || '',
                     ts_in: tsIn,
                     // A data de ENTRADA é gravada uma única vez e nunca mais muda. O campo "d" passa a
@@ -971,6 +980,7 @@
                     const jsonOrigem = await respOrigem.json();
                     if (jsonOrigem.ok) {
                         (jsonOrigem.registros || []).forEach(reg => {
+                            if (!arquivoValido(reg.arquivo)) return;
                             if (!db[reg.arquivo]) {
                                 db[reg.arquivo] = { h: normalizarHora(reg.hora), d: reg.data || dataBr, a: 'AGUARDANDO', f: '-', resp: '-', apagado: false, fonteSheet: true };
                             }
@@ -1507,7 +1517,7 @@
         restaurarFilaPersistida();
         processarFilaSincronizacao();
         // Re-tenta sincronizações que falharam (antes só re-tentava quando surgia outra mudança)
-        setInterval(() => { if (filaSincronizacao.size || filaOrigemSincronizacao.size) processarFilaSincronizacao(); }, 60000);
+        setInterval(() => { if (filaSincronizacao.size || filaOrigemSincronizacao.size || filaDevolucaoSincronizacao.size) processarFilaSincronizacao(); }, 60000);
         // Máquinas sem pastas (tablet, gestor): antes nunca viam Asten/Solus e ficavam congeladas na carga inicial
         await atualizarSemPastas();
         carregarDevolucoesRemotas(180);
@@ -1567,7 +1577,12 @@
     // DEVOLVIDO: ela achou divergência na conferência. Cada devolução vira um evento no item, que alimenta
     // o filtro "↩️ Devolvidos", o motivo informado e a aba "Devoluções" do Dashboard (eficiência da
     // conferência inicial de quem baixou do Asten e colocou o documento na Origem).
-    const MOTIVOS_DEVOLUCAO = ['Documento (nome não mudou)', 'CNPJ/CPF incorreto', 'Número da NF incorreto', 'Valor divergente', 'Fornecedor / razão social', 'Data / vencimento', 'Unidade / centro de custo', 'Tipo de documento incorreto', 'Forma de pagamento', 'Documento ilegível ou incompleto', 'Falta anexo / documento', 'Documento duplicado', 'Nome do arquivo fora do padrão', 'Outro'];
+    // Arquivos temporários/de sistema NUNCA viram registro: download em andamento do Chrome/Edge/Firefox
+    // ("Não confirmado 123.crdownload", ".part"), travas do Office ("~$..."), Thumbs.db, desktop.ini etc.
+    const RX_ARQ_TEMP = /\.(crdownload|part|partial|download|tmp|temp|lock|opdownload)$|^~\$|^(n[ãa]o confirmado|unconfirmed)\s+\d+|^(thumbs\.db|desktop\.ini)$/i;
+    function arquivoValido(nome) { nome = String(nome || ''); return !!nome && !nome.startsWith('.') && !RX_ARQ_TEMP.test(nome.trim()); }
+    const MOTIVOS_DEVOLUCAO = ['Documento (nome não mudou)', 'CNPJ/CPF incorreto', 'Número da NF incorreto', 'Valor divergente', 'Fornecedor / razão social', 'Data / vencimento', 'Unidade / centro de custo', 'Tipo de documento incorreto', 'Forma de pagamento', 'Documento ilegível ou incompleto', 'Falta anexo / documento', 'Documento duplicado', 'Nome do arquivo fora do padrão', 'Nota substituída (reemitida)', 'Documento cancelado', 'Outro'];
+    const FLUXO_SUBST = 'AGUARDANDO SUBSTITUIÇÃO';
     const RESP_ASTEN = String((window.APP_CONFIG && window.APP_CONFIG.responsavelAsten) || '').trim();
     function dataBrDe(ts) { const d = new Date(ts); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; }
     function colabDoFluxo(f, item) {
@@ -1599,17 +1614,24 @@
             if (n2 === nomeNovo) continue;
             const it = db[n2];
             if (!it || it.apagado || it.a === 'CONCILIADO') continue;
-            const candidato = colabDoFluxo(it.f) || it.naPastaDevolvidos || ((it.devolucoes || []).length && it.f === 'NA ORIGEM');
-            if (!candidato || !sumiu(n2)) continue;
+            const esperandoSubst = !!(it.naPastaDevolvidos || it.aguardandoSubst);
+            const candidato = colabDoFluxo(it.f) || esperandoSubst || ((it.devolucoes || []).length && it.f === 'NA ORIGEM');
+            // Em _DEVOLVIDOS o antigo pode CONTINUAR lá (não se apaga mais): o Monitor o arquiva sozinho depois de ligar
+            if (!candidato || (!sumiu(n2) && !it.naPastaDevolvidos)) continue;
             const ant = camposDoNome(n2);
             if (!ant) continue;
             const dif = CAMPOS_COMPARADOS.filter(c => (ant[c] || '') !== (novo[c] || ''));
             const iguais = CAMPOS_COMPARADOS.length - dif.length;
-            if (dif.length === 0 || dif.length > 3) continue;
-            // NF ou CNPJ precisa bater (senão é outro documento), salvo quando só um deles mudou e o resto confere
-            if (dif.includes('nf') && dif.includes('cnpj')) continue;
-            if (dif.includes('nf') && dif.length > 1) continue; // NF e valor diferentes = provavelmente outra nota do mesmo fornecedor
-            if (!melhor || iguais > melhor.iguais || (iguais === melhor.iguais && (it.ts_colab || it.ts_in || 0) > (db[melhor.nome].ts_colab || db[melhor.nome].ts_in || 0))) melhor = { nome: n2, diferencas: dif, iguais };
+            if (dif.length === 0) continue;
+            let relaxado = false;
+            if (dif.length > 3 || (dif.includes('nf') && dif.length > 1) || (dif.includes('nf') && dif.includes('cnpj'))) {
+                // Devolvido e excluído de _DEVOLVIDOS: o fornecedor costuma reemitir a nota (NF/valor/data novos).
+                // Aceita como substituto se for do MESMO CNPJ e fornecedor; qualquer outro caso = documento diferente.
+                if (!esperandoSubst || dif.includes('cnpj') || (dif.includes('fornecedor') && ant.fornecedor && novo.fornecedor)) continue;
+                relaxado = true;
+            }
+            const pontos = iguais - (relaxado ? 10 : 0); // casamento exato sempre vence o "substituto"
+            if (!melhor || pontos > melhor.pontos || (pontos === melhor.pontos && (it.ts_colab || it.ts_in || 0) > (db[melhor.nome].ts_colab || db[melhor.nome].ts_in || 0))) melhor = { nome: n2, diferencas: dif, iguais, pontos, relaxado };
         }
         return melhor;
     }
@@ -1665,21 +1687,30 @@
         return achado ? achado[1] : String(nomePasta).replace(/^\d+\s*[-–.)]?\s*/, '').trim();
     }
     let _cacheDevolvidos = { handle: null, verificadoEm: 0 };
+    // Subpastas de ARQUIVO MORTO dentro de _DEVOLVIDOS: o Monitor guarda ali o PDF antigo (nunca apaga).
+    // O que está nelas já foi resolvido e NÃO conta como "aguardando correção".
+    const PASTA_SUBSTITUIDOS = '_SUBSTITUIDOS', PASTA_CANCELADOS = '_CANCELADOS';
+    const ehPastaArquivoMorto = n => /SUBSTITU|CANCELAD/.test(normalizarNome(n));
+    let _baseDevolvidos = null;              // handle da pasta _DEVOLVIDOS lida no último ciclo
+    const _locDevolvidos = new Map();        // nome do arquivo → handle da (sub)pasta onde ele está
+    async function lerPastaDevolvidos(pasta, mapa) {
+        _locDevolvidos.clear(); _baseDevolvidos = pasta;
+        for await (const h of pasta.values()) {
+            if (h.kind === 'file' && arquivoValido(h.name)) { mapa.set(h.name, ''); _locDevolvidos.set(h.name, pasta); }
+            else if (h.kind === 'directory' && !ehPastaArquivoMorto(h.name)) {
+                const motivo = motivoDaPasta(h.name);
+                for await (const f of h.values()) if (f.kind === 'file' && arquivoValido(f.name)) { mapa.set(f.name, motivo); _locDevolvidos.set(f.name, h); }
+            }
+        }
+        return mapa;
+    }
     // Map(nome do arquivo → motivo); '' = arquivo solto na raiz de _DEVOLVIDOS (sem motivo). null = falha de leitura (ciclo ignorado).
     async function lerDevolvidosOrigem(rootHandle) {
         const mapa = new Map();
         // 1) Pasta conectada pelo botão "↩️ Devolvidos" (pode estar em qualquer lugar da rede)
         if (conexoes["DEVOLVIDOS"]) {
-            try {
-                for await (const h of conexoes["DEVOLVIDOS"].values()) {
-                    if (h.kind === 'file' && !h.name.startsWith('.')) mapa.set(h.name, '');
-                    else if (h.kind === 'directory') { const motivo = motivoDaPasta(h.name); for await (const f of h.values()) if (f.kind === 'file' && !f.name.startsWith('.')) mapa.set(f.name, motivo); }
-                }
-                return mapa;
-            } catch (e) {
-                console.warn('Falha ao ler a pasta Devolvidos — ciclo ignorado para devoluções:', e);
-                return null;
-            }
+            try { return await lerPastaDevolvidos(conexoes["DEVOLVIDOS"], mapa); }
+            catch (e) { console.warn('Falha ao ler a pasta Devolvidos — ciclo ignorado para devoluções:', e); return null; }
         }
         // 2) Sem conexão própria: procura uma pasta "_DEVOLVIDOS" dentro da Origem
         if (!rootHandle) return mapa;
@@ -1691,25 +1722,104 @@
                 _cacheDevolvidos = { handle: pasta || null, verificadoEm: Date.now() };
                 if (!pasta) return mapa;
             }
-            for await (const h of pasta.values()) {
-                if (h.kind === 'file' && !h.name.startsWith('.')) mapa.set(h.name, '');
-                else if (h.kind === 'directory') {
-                    const motivo = motivoDaPasta(h.name);
-                    for await (const f of h.values()) if (f.kind === 'file' && !f.name.startsWith('.')) mapa.set(f.name, motivo);
-                }
-            }
-            return mapa;
+            return await lerPastaDevolvidos(pasta, mapa);
         } catch (e) {
             _cacheDevolvidos = { handle: null, verificadoEm: 0 };
             console.warn('Falha ao ler a pasta de devolvidos — ciclo ignorado para devoluções:', e);
             return null;
         }
     }
+
+    // ===== ORGANIZAÇÃO AUTOMÁTICA DE _DEVOLVIDOS (só no computador que autorizou GRAVAÇÃO) =====
+    // Substituído → _DEVOLVIDOS\_SUBSTITUIDOS · Cancelado → _DEVOLVIDOS\_CANCELADOS. "Mover" = copiar, conferir o
+    // tamanho e só então remover o original; qualquer falha deixa o original onde está.
+    let _organizando = false, _avisoOrganizarFechado = false, _pendOrganizar = [], _falhasOrganizar = {};
+    function destinoArquivoMorto(nome) {
+        const it = db[nome]; if (!it) return null;
+        const ult = (it.devolucoes || [])[(it.devolucoes || []).length - 1];
+        if (ult && ult.cancelado) return PASTA_CANCELADOS;
+        if (it.apagado && it.substituidoPor) return PASTA_SUBSTITUIDOS;
+        return null;
+    }
+    async function nomeLivre(dir, nome) {
+        const m = nome.match(/^(.*?)(\.[^.]+)?$/); let i = 1, cand = nome;
+        while (true) { try { await dir.getFileHandle(cand); cand = `${m[1]} (${++i})${m[2] || ''}`; } catch (e) { return cand; } }
+    }
+    async function moverParaArquivoMorto(nome, destino) {
+        const origem = _locDevolvidos.get(nome); if (!origem || !_baseDevolvidos) return false;
+        const fhOrig = await origem.getFileHandle(nome), arq = await fhOrig.getFile();
+        const dest = await _baseDevolvidos.getDirectoryHandle(destino, { create: true });
+        const nomeFinal = await nomeLivre(dest, nome);
+        const fh = await dest.getFileHandle(nomeFinal, { create: true });
+        const w = await fh.createWritable(); await w.write(arq); await w.close();
+        const copia = await fh.getFile();
+        if (copia.size !== arq.size) { try { await dest.removeEntry(nomeFinal); } catch (e) {} throw new Error('cópia incompleta'); }
+        await origem.removeEntry(nome);
+        _locDevolvidos.delete(nome);
+        const it = db[nome]; if (it) { it.arquivadoEm = Date.now(); it.arquivadoEmPasta = destino + (nomeFinal !== nome ? ' (' + nomeFinal + ')' : ''); }
+        return true;
+    }
+    async function organizarDevolvidos(mapa) {
+        if (_organizando || !mapa || !_baseDevolvidos) return false;
+        let mudou = false;
+        const pend = [...mapa.keys()].map(n => ({ nome: n, destino: destinoArquivoMorto(n) })).filter(x => x.destino);
+        // Cancelado em OUTRO computador (veio pela planilha): some das pendências aqui também
+        pend.forEach(x => { if (x.destino === PASTA_CANCELADOS && db[x.nome] && !db[x.nome].apagado) { db[x.nome].apagado = true; delete db[x.nome].naPastaDevolvidos; delete db[x.nome].aguardandoSubst; filaSincronizacao.add(x.nome); mudou = true; } });
+        _pendOrganizar = pend; avisoOrganizar();
+        if (!pend.length) return mudou;
+        let perm = 'denied'; try { perm = await _baseDevolvidos.queryPermission({ mode: 'readwrite' }); } catch (e) {}
+        if (perm !== 'granted') return mudou; // sem autorização de gravação: só avisa (botão no aviso)
+        _organizando = true;
+        try {
+            let ok = 0;
+            for (const x of pend) {
+                if ((_falhasOrganizar[x.nome] || 0) >= 3) continue;
+                try { if (await moverParaArquivoMorto(x.nome, x.destino)) { ok++; mapa.delete(x.nome); filaSincronizacao.add(x.nome); } }
+                catch (e) { _falhasOrganizar[x.nome] = (_falhasOrganizar[x.nome] || 0) + 1; console.warn(`Não foi possível arquivar "${x.nome}" em ${x.destino}:`, e); }
+            }
+            if (ok) mudou = true;
+            _pendOrganizar = _pendOrganizar.filter(x => _locDevolvidos.has(x.nome)); avisoOrganizar();
+        } finally { _organizando = false; }
+        return mudou;
+    }
+    async function autorizarOrganizacaoDevolvidos() {
+        if (!_baseDevolvidos) { alert('A pasta de devolvidos ainda não foi lida. Aguarde alguns segundos.'); return; }
+        try {
+            const r = await _baseDevolvidos.requestPermission({ mode: 'readwrite' });
+            if (r !== 'granted') { alert('Permissão de gravação não concedida. Os arquivos continuam onde estão.'); return; }
+            _falhasOrganizar = {};
+            const m = new Map([..._locDevolvidos.keys()].map(n => [n, '']));
+            if (await organizarDevolvidos(m)) await dbEngine.save(db);
+            processarFilaSincronizacao(); atualizarTela();
+        } catch (e) { alert('Não foi possível autorizar: ' + (e && e.message || e)); }
+    }
+    function avisoOrganizar() {
+        let el = document.getElementById('aviso-organizar-dev');
+        const falhas = _pendOrganizar.filter(x => (_falhasOrganizar[x.nome] || 0) >= 3).length;
+        if (!_pendOrganizar.length || (_avisoOrganizarFechado && !falhas)) { if (el) el.remove(); return; }
+        if (!el) { el = document.createElement('div'); el.id = 'aviso-organizar-dev'; el.className = 'no-print'; el.style.cssText = 'position:fixed; right:16px; bottom:16px; z-index:9000; max-width:min(380px,calc(100vw - 32px)); background:#fff; border-left:5px solid #F47920; border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.18); padding:12px 14px; font-size:0.8rem; color:#333;'; document.body.appendChild(el); }
+        const sub = _pendOrganizar.filter(x => x.destino === PASTA_SUBSTITUIDOS).length, can = _pendOrganizar.length - sub;
+        el.innerHTML = `<div style="font-weight:800; color:#0A5F55; margin-bottom:4px;">📦 Organizar _DEVOLVIDOS</div>
+            <div>${sub ? `${sub} substituído(s) → <b>_SUBSTITUIDOS</b>` : ''}${sub && can ? '<br>' : ''}${can ? `${can} cancelado(s) → <b>_CANCELADOS</b>` : ''}</div>
+            ${falhas ? `<div style="color:#c62828; margin-top:4px;">⚠️ ${falhas} arquivo(s) não puderam ser movidos (aberto em outro programa ou sem permissão na rede). Feche o PDF e clique em Autorizar de novo.</div>` : ''}
+            <div style="font-size:0.72rem; color:#5B5C65; margin:6px 0;">Faça isso só no computador que fica com o Monitor aberto. Nada é apagado: o PDF é copiado, conferido e só então removido da origem.</div>
+            <div style="display:flex; gap:6px; justify-content:flex-end;"><button class="btn btn-outline" style="padding:4px 10px;" onclick="_avisoOrganizarFechado=true; avisoOrganizar()">Agora não</button><button class="btn" style="background:#00995D; color:#fff; border:none; padding:4px 10px;" onclick="autorizarOrganizacaoDevolvidos()">Autorizar neste computador</button></div>`;
+    }
     // Aplica motivo / correção a partir da pasta. Retorna true se mudou algo.
-    function aplicarPastaDevolucao(item, nome, mapa, agora) {
-        if (!mapa || item.apagado || item.a === 'CONCILIADO') return false;
+    function aplicarPastaDevolucao(item, nome, mapa, agora, presente) {
+        if (!mapa || item.apagado) return false;
         if (!Array.isArray(item.devolucoes)) item.devolucoes = [];
         let ultima = item.devolucoes[item.devolucoes.length - 1];
+        // Estava "aguardando substituição" e o MESMO arquivo reapareceu (Origem, colaboradora ou Lançados) = corrigido
+        if (item.aguardandoSubst && presente && !mapa.has(nome)) {
+            delete item.aguardandoSubst;
+            if (ultima && !ultima.corrigidoEm) {
+                if (!ultima.motivo) { ultima.motivo = 'Documento (nome não mudou)'; ultima.motivoAuto = true; }
+                ultima.corrigidoEm = agora; ultima.tempoCorrecaoMin = Math.round(msUteis(ultima.em, agora) / 60000);
+            }
+            return true;
+        }
+        if (item.a === 'CONCILIADO') return false;
         if (mapa.has(nome)) {
             const motivo = mapa.get(nome);
             let mudou = false;
@@ -1718,6 +1828,15 @@
             if (motivo && (!ultima.motivo || ultima.motivoDaPasta || ultima.motivoAuto) && ultima.motivo !== motivo) { ultima.motivo = motivo; ultima.motivoDaPasta = true; ultima.motivoAuto = false; mudou = true; }
             if (item.naPastaDevolvidos !== (motivo || '—')) { item.naPastaDevolvidos = motivo || '—'; mudou = true; }
             return mudou;
+        }
+        if (item.naPastaDevolvidos && ultima && !presente) {
+            // Saiu de _DEVOLVIDOS e NÃO voltou para lugar nenhum = foi excluído. Não é correção: fica aguardando
+            // o arquivo substituto (nota reemitida). Quando ele chegar na Origem, o Monitor liga os dois sozinho.
+            delete item.naPastaDevolvidos;
+            item.aguardandoSubst = agora; item._faltasOrigem = 0;
+            ultima.excluidoDaPastaEm = agora;
+            atualizarFluxoComHistorico(item, FLUXO_SUBST, agora);
+            return true;
         }
         if (item.naPastaDevolvidos && ultima) {
             if (!ultima.motivo) { ultima.motivo = 'Documento (nome não mudou)'; ultima.motivoAuto = true; }
@@ -1735,7 +1854,8 @@
             if ((await root.requestPermission({ mode: 'readwrite' })) !== 'granted') { alert('Permissão de gravação negada. As pastas não foram criadas.'); return; }
             const dev = await root.getDirectoryHandle(PASTA_DEVOLVIDOS, { create: true });
             _cacheDevolvidos = { handle: dev, verificadoEm: Date.now() };
-            alert(`Pasta criada: Origem\\${PASTA_DEVOLVIDOS}\n\nOriente a equipe:\n• Quem lança: ao achar divergência, mover o PDF para _DEVOLVIDOS.\n• Quem baixou do Asten: corrigir (o nome, se for o caso) e mover de volta para a Origem.\n\nO motivo é descoberto sozinho pelo campo do nome que foi corrigido.`);
+            for (const sp of [PASTA_SUBSTITUIDOS, PASTA_CANCELADOS]) { try { await dev.getDirectoryHandle(sp, { create: true }); } catch (e) {} }
+            alert(`Pasta criada: Origem\\${PASTA_DEVOLVIDOS}\n\nOriente a equipe:\n• Quem lança: ao achar divergência, mover o PDF para _DEVOLVIDOS.\n• Quem baixou do Asten: corrigir e mover de volta para a Origem — OU, se o fornecedor reemitiu a nota, só colocar a nota nova na Origem e deixar a antiga em _DEVOLVIDOS (NÃO apagar).\n• O Monitor move sozinho a antiga para _SUBSTITUIDOS; nota cancelada vai para _CANCELADOS ao clicar em \"Encerrar sem substituto\".\n\nO motivo é descoberto sozinho pelo campo do nome que foi corrigido.`);
         } catch (e) { alert('Não foi possível criar as pastas: ' + (e && e.message || e)); }
     }
 
@@ -2062,7 +2182,7 @@
                     if (!pasta) return;
                     pastasAbertas++;
                     for await (const h of pasta.values()) {
-                        if (h.kind === 'file' && !h.name.startsWith('.')) {
+                        if (h.kind === 'file' && arquivoValido(h.name)) {
                             arquivosFinalDatasAntigas.add(h.name);
                             pastaOndeAchou[h.name] = iso; // dia em que o arquivo foi de fato arquivado
                         }
@@ -2322,6 +2442,7 @@
         const base = {};
         const tsDe = (dataBr, hora) => { const p = String(dataBr || '').split('/'); if (p.length !== 3) return null; const h = String(normalizarHora(hora) || '00:00:00').split(':'); const d = new Date(+p[2], +p[1] - 1, +p[0], +h[0] || 0, +h[1] || 0, +h[2] || 0); return isNaN(d) ? null : d.getTime(); };
         json.lancamentos.forEach(l => {
+            if (!arquivoValido(l.arquivo)) return;
             const [arquivo, data, hora, tipo, resp, fluxo, status, sla, atualizadoTs, dataEntrada, nf, cnpj, historico] = l;
             if (!arquivo) return;
             const o = (json.origem || {})[arquivo] || [];
@@ -3880,7 +4001,7 @@
             const dataAlvoIso = document.getElementById('data-historico').value || getHojeISO();
 
             for await (const handle of rootHandle.values()) {
-                if (handle.kind === 'file' && !handle.name.startsWith('.')) {
+                if (handle.kind === 'file' && arquivoValido(handle.name)) {
                     fileSet.add(handle.name);
                 }
             }
@@ -3902,7 +4023,7 @@
             if (pastaDoDia) {
                 await verifyPermission(pastaDoDia);
                 for await (const handle of pastaDoDia.values()) {
-                    if (handle.kind === 'file' && !handle.name.startsWith('.')) {
+                    if (handle.kind === 'file' && arquivoValido(handle.name)) {
                         fileSet.add(handle.name);
                     }
                 }
@@ -3956,7 +4077,7 @@
 
             let arquivoAlvo = null;
             for await (const handle of conexoes["ASTEN"].values()) {
-                if (handle.kind === 'file' && !handle.name.startsWith('.') && pastaCorrespondeAData(handle.name, dataAlvoIso)) {
+                if (handle.kind === 'file' && arquivoValido(handle.name) && pastaCorrespondeAData(handle.name, dataAlvoIso)) {
                     arquivoAlvo = handle;
                     break;
                 }
@@ -3968,7 +4089,7 @@
                 const pastaDoDiaAsten = await encontrarPastaDoDia(conexoes["ASTEN"], dataAlvoIso);
                 if (pastaDoDiaAsten) {
                     for await (const handle of pastaDoDiaAsten.values()) {
-                        if (handle.kind === 'file' && !handle.name.startsWith('.') && pastaCorrespondeAData(handle.name, dataAlvoIso)) {
+                        if (handle.kind === 'file' && arquivoValido(handle.name) && pastaCorrespondeAData(handle.name, dataAlvoIso)) {
                             arquivoAlvo = handle;
                             break;
                         }
@@ -3977,7 +4098,7 @@
                     // o nome bater com a data (a própria pasta já indica de qual dia é o relatório).
                     if (!arquivoAlvo) {
                         for await (const handle of pastaDoDiaAsten.values()) {
-                            if (handle.kind === 'file' && !handle.name.startsWith('.')) {
+                            if (handle.kind === 'file' && arquivoValido(handle.name)) {
                                 if (arquivoAlvo) { arquivoAlvo = null; break; } // mais de 1 arquivo — ambíguo, desiste
                                 arquivoAlvo = handle;
                             }
@@ -4127,7 +4248,7 @@
             await verifyPermission(conexoes["SOLUS"]);
             let arquivoAlvo = null;
             for await (const handle of conexoes["SOLUS"].values()) {
-                if (handle.kind === 'file' && !handle.name.startsWith('.') && pastaCorrespondeAData(handle.name, dataAlvoIso)) {
+                if (handle.kind === 'file' && arquivoValido(handle.name) && pastaCorrespondeAData(handle.name, dataAlvoIso)) {
                     arquivoAlvo = handle; break;
                 }
             }
@@ -4136,13 +4257,13 @@
                 const pastaDoDiaSolus = await encontrarPastaDoDia(conexoes["SOLUS"], dataAlvoIso);
                 if (pastaDoDiaSolus) {
                     for await (const handle of pastaDoDiaSolus.values()) {
-                        if (handle.kind === 'file' && !handle.name.startsWith('.') && pastaCorrespondeAData(handle.name, dataAlvoIso)) {
+                        if (handle.kind === 'file' && arquivoValido(handle.name) && pastaCorrespondeAData(handle.name, dataAlvoIso)) {
                             arquivoAlvo = handle; break;
                         }
                     }
                     if (!arquivoAlvo) {
                         for await (const handle of pastaDoDiaSolus.values()) {
-                            if (handle.kind === 'file' && !handle.name.startsWith('.')) {
+                            if (handle.kind === 'file' && arquivoValido(handle.name)) {
                                 if (arquivoAlvo) { arquivoAlvo = null; break; }
                                 arquivoAlvo = handle;
                             }
@@ -4655,11 +4776,13 @@
                             if (ligado) {
                                 const velho = db[ligado.nome];
                                 const deColab = colabDoFluxo(velho.f);
-                                db[f].devolucoes = (velho.devolucoes || []).map(e => Object.assign({}, e));
+                                const chaveVelha = chaveDocumento(ligado.nome, velho);
+                                db[f].devolucoes = (velho.devolucoes || []).map(e => Object.assign({ chaveOriginal: chaveVelha }, e));
                                 db[f].historico = (velho.historico || []).map(h => Object.assign({}, h, { saiu: h.saiu || now })).concat(db[f].historico);
                                 db[f].ts_in = velho.ts_in || db[f].ts_in; db[f].d_entrada = velho.d_entrada || db[f].d_entrada; db[f].h = velho.h || db[f].h;
                                 if (velho.resp && velho.resp !== '-') db[f].resp = velho.resp;
-                                const motivoAuto = motivoPelosCampos(ligado.diferencas);
+                                const substituto = !!ligado.relaxado; // NF/valor novos do mesmo fornecedor = nota reemitida
+                                const motivoAuto = substituto ? 'Nota substituída (reemitida)' : motivoPelosCampos(ligado.diferencas);
                                 if (deColab) {
                                     // a colaboradora devolveu já corrigindo o nome
                                     registrarDevolucao(db[f], deColab, now, { renomeadoDe: ligado.nome, camposAlterados: ligado.diferencas, motivo: motivoAuto, motivoAuto: !!motivoAuto });
@@ -4667,8 +4790,9 @@
                                     // quem baixou do Asten corrigiu o nome ao tirar da pasta de devolvidos
                                     const ult = db[f].devolucoes[db[f].devolucoes.length - 1];
                                     if (ult && motivoAuto && (!ult.motivo || ult.motivoAuto)) { ult.motivo = motivoAuto; ult.motivoAuto = true; ult.camposAlterados = ligado.diferencas; }
-                                    if (ult) ult.renomeadoDe = ligado.nome;
+                                    if (ult) { ult.renomeadoDe = ligado.nome; if (substituto) { ult.substituido = true; ult.substituidoPor = f; } }
                                     if (velho.naPastaDevolvidos) db[f].naPastaDevolvidos = velho.naPastaDevolvidos; // a correção é marcada quando sair de _DEVOLVIDOS
+                                    else if (velho.aguardandoSubst && ult && !ult.corrigidoEm) { ult.corrigidoEm = now; ult.tempoCorrecaoMin = Math.round(msUteis(ult.em, now) / 60000); }
                                 }
                                 velho.apagado = true; velho.substituidoPor = f;
                                 filaSincronizacao.add(ligado.nome);
@@ -4767,6 +4891,9 @@
                 for (let n in db) {
                   try {
                     if (db[n].apagado) continue;
+                    // Registro criado por arquivo temporário de download (".crdownload", "Não confirmado 123…")
+                    // antes do filtro existir: apaga aqui e na planilha.
+                    if (!arquivoValido(n)) { db[n].apagado = true; houveMudanca = true; filaSincronizacao.add(n); continue; }
                     // Um item vindo do Sheets (de outro dia/computador) só é ignorado se ESTA máquina não
                     // tiver, agora, nenhuma pasta relevante conectada para de fato conferir seu status —
                     // nesse caso não há como verificar nada mesmo. Mas se pelo menos uma pasta (Origem,
@@ -4882,6 +5009,14 @@
                                     // só marca RECORTADO depois de 3 ciclos seguidos sem achar o arquivo em
                                     // lugar nenhum (nem Origem, nem nenhuma colaboradora conectada).
                                     db[n]._faltasOrigem = (db[n]._faltasOrigem || 0) + 1;
+                                    // Baixado direto na Origem com o nome padrão do navegador ("nota.pdf", "download (3).pdf")
+                                    // e renomeado logo depois: o nome provisório some sem nunca ter ido a ninguém. Não é
+                                    // recorte — é o mesmo arquivo com outro nome, que já entrou como registro próprio.
+                                    if (db[n]._faltasOrigem >= 3 && db[n].f === "NA ORIGEM" && !camposDoNome(n) && (!db[n].resp || db[n].resp === "-")
+                                        && !(db[n].devolucoes || []).length && db[n].ts_in && now - db[n].ts_in < 30 * 60000) {
+                                        db[n].apagado = true; db[n].motivoExclusao = 'Nome provisório renomeado logo após o download';
+                                        houveMudanca = true; filaSincronizacao.add(n); continue;
+                                    }
                                     if (db[n]._faltasOrigem >= 3 && !rebaixamentoBloqueado(n)) {
                                         atualizarFluxoComHistorico(db[n], db[n].resp !== "-" ? `RECORTADO (${db[n].resp})` : "RECORTADO (DA ORIGEM)", now);
                                     }
@@ -4892,7 +5027,7 @@
                         }
                     }
 
-                    if (aplicarPastaDevolucao(db[n], n, devolvidosMap, now)) { houveMudanca = true; filaSincronizacao.add(n); }
+                    if (aplicarPastaDevolucao(db[n], n, devolvidosMap, now, estaNaOrigem || estaNoFinal || !!nomeColabAtual)) { houveMudanca = true; filaSincronizacao.add(n); }
                     if (statusAntigo !== db[n].a || fluxoAntigo !== db[n].f) {
                         houveMudanca = true;
                         filaSincronizacao.add(n);
@@ -4908,6 +5043,7 @@
                     }
                   }
                 }
+                try { if (await organizarDevolvidos(devolvidosMap)) houveMudanca = true; } catch (eOrg) { console.warn('Organização de _DEVOLVIDOS:', eOrg); }
             }
 
             if (houveMudanca) {
@@ -5019,7 +5155,7 @@
         const tit = ev.map((e, i) => `${i + 1}ª: ${e.d} por ${e.de} — ${e.motivo || 'motivo não informado'}${e.motivoAuto ? ' (automático)' : (e.motivoDaPasta ? ' (pela pasta)' : '')}${e.renomeadoDe ? ' (voltou renomeado)' : ''}${e.corrigidoEm ? ` · corrigido em ${formatarTempoSLA(e.tempoCorrecaoMin * 60000)}` : ''}`).join('\n') + '\nClique para informar/corrigir o motivo';
         const aguard = db[n].naPastaDevolvidos;
         const ult = ev[ev.length - 1];
-        return `<div style="margin-top:4px;"><span class="chip ${semMotivo ? 'chip-erro' : 'chip-alerta'}" style="cursor:pointer;" title="${esc(tit)}" onclick="abrirMotivoDevolucao('${nq}')">↩️ Devolvido ${ev.length}x${ult.motivo ? ' · ' + esc(ult.motivo) : ' · sem motivo'}${aguard ? ' · aguardando correção' : (ult.corrigidoEm ? ' · corrigido' : '')}</span></div>`;
+        return `<div style="margin-top:4px;"><span class="chip ${semMotivo ? 'chip-erro' : 'chip-alerta'}" style="cursor:pointer;" title="${esc(tit)}" onclick="abrirMotivoDevolucao('${nq}')">↩️ Devolvido ${ev.length}x${ult.motivo ? ' · ' + esc(ult.motivo) : ' · sem motivo'}${aguard ? ' · aguardando correção' : db[n].aguardandoSubst ? ' · excluído, aguardando substituto' : (ult.substituido ? ' · substituído' : ult.corrigidoEm ? ' · corrigido' : '')}</span></div>`;
     }
     function abrirMotivoDevolucao(nome) {
         const item = db[nome]; if (!item || !(item.devolucoes || []).length) return;
@@ -5036,9 +5172,23 @@
         modal.innerHTML = `<div style="background:#fff; border-radius:12px; padding:20px; width:min(560px,92vw); max-height:85vh; overflow:auto; border-top:5px solid #F47920;">
             <div style="font-family:Poppins,sans-serif; font-weight:800; color:#0A5F55; margin-bottom:4px;">↩️ Motivo da devolução à Origem</div>
             <div style="font-size:0.72rem; color:#94a3b8; margin-bottom:12px; word-break:break-all;">${esc(nome)}</div>${linhas}
+            ${(item.aguardandoSubst || item.naPastaDevolvidos) ? `<div style="background:#FFF4E5; border-left:4px solid #F47920; padding:8px 10px; border-radius:6px; font-size:0.78rem; margin-bottom:8px;">${item.aguardandoSubst ? `🗑️ Excluído de _DEVOLVIDOS em ${esc(dataBrDe(item.aguardandoSubst))}` : '📂 Em _DEVOLVIDOS'} — quando a nota corrigida ou reemitida chegar na Origem, é ligada sozinha (mesmo CNPJ/fornecedor) e o PDF antigo vai para _SUBSTITUIDOS. Se a nota foi <strong>cancelada e não terá substituta</strong>, encerre: <button class="btn btn-outline" style="margin-left:4px; padding:3px 8px; font-size:0.75rem;" id="btn-encerrar-devol">Encerrar sem substituto</button></div>` : ''}
             <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:6px;"><button class="btn btn-outline" onclick="this.closest('.modal-devolucao').remove()">Cancelar</button><button class="btn" style="background:#00995D; color:#fff; border:none;" id="btn-salvar-devol">Salvar</button></div></div>`;
         document.body.appendChild(modal);
         modal.addEventListener('click', ev => { if (ev.target === modal) modal.remove(); });
+        const btnEnc = modal.querySelector('#btn-encerrar-devol');
+        if (btnEnc) btnEnc.onclick = async () => {
+            if (!confirm('Encerrar este documento como CANCELADO, sem arquivo substituto?\nEle sai das pendências; a devolução continua contando nas estatísticas.')) return;
+            const ult = item.devolucoes[item.devolucoes.length - 1], agora = Date.now();
+            ult.cancelado = true; ult.corrigidoEm = agora; ult.tempoCorrecaoMin = Math.round(msUteis(ult.em, agora) / 60000);
+            if (!ult.motivo || ult.motivoAuto) { ult.motivo = 'Documento cancelado'; ult.motivoAuto = false; }
+            delete item.aguardandoSubst; delete item.naPastaDevolvidos; item.apagado = true;
+            // Clique = gesto do usuário: pede gravação já aqui e move o PDF para _CANCELADOS
+            if (_baseDevolvidos && _locDevolvidos.has(nome)) { try { if ((await _baseDevolvidos.requestPermission({ mode: 'readwrite' })) === 'granted') await moverParaArquivoMorto(nome, PASTA_CANCELADOS); } catch (eMv) { console.warn('Arquivar cancelado:', eMv); } }
+            await dbEngine.save(db);
+            filaSincronizacao.add(nome); processarFilaSincronizacao();
+            modal.remove(); atualizarTela();
+        };
         modal.querySelector('#btn-salvar-devol').onclick = async () => {
             modal.querySelectorAll('.dev-motivo').forEach(s => { const ev = item.devolucoes[+s.dataset.i]; if (ev.motivo !== s.value) { ev.motivo = s.value; ev.motivoAuto = false; } });
             modal.querySelectorAll('.dev-obs').forEach(s => { item.devolucoes[+s.dataset.i].obs = s.value.trim(); });
