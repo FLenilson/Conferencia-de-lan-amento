@@ -4049,7 +4049,7 @@
     // --- LEITURA DO RELATÓRIO ASTEN (Excel, salvo por dia numa pasta única) ---
     let _astenCache = { dataIso: null, nomeArquivo: null, mtime: null, nomes: null };
     let astenEsperadosAtual = new Set();
-    let astenPendentesAtual = [];
+    let astenPendentesAtual = [], astenNomeDiferente = [];
 
     // CORRIGIDO: sempre lê a Coluna A (índice 0), pulando a linha de cabeçalho.
     function extrairNomesEsperados(linhas) {
@@ -4138,8 +4138,20 @@
     function astenContem(nomeArquivo) { const c = chaveArquivo(nomeArquivo); for (const e of astenEsperadosAtual) if (chaveArquivo(e) === c) return true; return false; }
     function atualizarPainelAsten() {
         const conhecidos = indiceArquivosConhecidos();
-        const baixados = [...astenEsperadosAtual].filter(n => conhecidos.has(chaveArquivo(n)));
-        astenPendentesAtual = [...astenEsperadosAtual].filter(n => !conhecidos.has(chaveArquivo(n)));
+        // Mesmo documento (CNPJ + NF) salvo com nome diferente do Asten: foi baixado, mas o nome diverge.
+        // Antes contava como "não baixado" e escondia a divergência de digitação no nome.
+        const porNfCnpj = {};
+        for (const n in db) { if (db[n].apagado) continue; const c = camposDoNome(n); if (c && c.nf && c.cnpj) (porNfCnpj[c.cnpj + '|' + c.nf] = porNfCnpj[c.cnpj + '|' + c.nf] || []).push(n); }
+        astenNomeDiferente = [];
+        const naoAchados = [...astenEsperadosAtual].filter(n => !conhecidos.has(chaveArquivo(n)));
+        astenPendentesAtual = naoAchados.filter(n => {
+            const c = camposDoNome(n), achados = c && c.nf && c.cnpj ? porNfCnpj[c.cnpj + '|' + c.nf] : null;
+            if (!achados) return true;
+            const real = achados[0], cr = camposDoNome(real);
+            astenNomeDiferente.push({ asten: n, real, campos: CAMPOS_COMPARADOS.filter(k => (c[k] || '') !== (cr[k] || '')) });
+            return false;
+        });
+        const baixados = [...astenEsperadosAtual].filter(n => !astenPendentesAtual.includes(n));
         document.getElementById('v-asten-baixados').innerText = baixados.length;
         document.getElementById('v-asten-pendentes').innerText = astenPendentesAtual.length;
         document.getElementById('badge-asten-pendentes').innerText = astenPendentesAtual.length;
@@ -4158,7 +4170,13 @@
             corpo.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:50px; color:#94a3b8; font-style: italic;">Nenhum relatório Asten encontrado com a data selecionada no nome do arquivo.</td></tr>`;
             return;
         }
+        const rotulo = { tipo: 'tipo', unidade: 'unidade', nf: 'NF', fornecedor: 'fornecedor', cnpj: 'CNPJ', data: 'data', formaPagamento: 'forma de pagamento', valorBruto: 'valor bruto', valorLiquido: 'valor líquido' };
+        const blocoDiferente = astenNomeDiferente.length ? `<tr><td colspan="2" style="background:#FFF8E1; padding:8px 12px; font-weight:800; color:#8a6d00; font-size:0.8rem;">⚠️ Baixados com NOME DIFERENTE do Asten (mesmo CNPJ e NF) — ${astenNomeDiferente.length}</td></tr>` + astenNomeDiferente.map(x => `
+            <tr><td style="font-size:0.8rem;"><div><span style="color:#5B5C65;">Asten:</span> ${esc(x.asten)}</div><div><span style="color:#5B5C65;">Na pasta:</span> ${esc(x.real)}</div>
+                <div style="color:#c62828; font-weight:700; margin-top:2px;">Diferença: ${x.campos.length ? x.campos.map(k => rotulo[k] || k).join(', ') : 'acentos/espaços'}</div></td>
+                <td style="text-align:center;"><button class="btn btn-outline" style="padding:4px 10px; font-size:0.78rem;" onclick="navigator.clipboard.writeText('${jsq(x.asten)}'); this.innerText='Copiado!';">📋 Copiar nome Asten</button></td></tr>`).join('') : '';
         if (astenPendentesAtual.length === 0) {
+            if (blocoDiferente) { corpo.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:14px; color:#0A5F55; font-weight:700;">✅ Nenhum item do Asten sem arquivo.</td></tr>` + blocoDiferente; return; }
             corpo.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:50px; color:#0A5F55; font-weight:700;">✅ Todos os itens do relatório Asten do dia selecionado já foram baixados na pasta Origem.</td></tr>`;
             return;
         }
@@ -4171,7 +4189,7 @@
                     <button class="btn btn-outline" style="padding:4px 10px; font-size:0.78rem;" onclick="navigator.clipboard.writeText('${jsq(nome)}'); this.innerText='Copiado!'; setTimeout(()=>this.innerText='📋 Copiar nome', 1500);">📋 Copiar nome</button>
                 </td>
             </tr>
-        `).join('');
+        `).join('') + blocoDiferente;
     }
 
     // --- LEITURA DO RELATÓRIO SOLUS (Excel, salvo por dia numa pasta única) ---
