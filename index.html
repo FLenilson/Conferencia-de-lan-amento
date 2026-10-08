@@ -271,7 +271,7 @@
                 <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">1. ENTRADA</span>
                 <button id="btn-conn-ORIGEM" class="btn-conn conn-origem" onclick="conectarPasta('ORIGEM')">📥 Origem</button>
                 <button class="btn-conn" style="background:#E6F4EE; border-color:#00995D; color:#0A5F55; font-weight:800;" onclick="abrirConfigPlanilha()" title="Endereço do Apps Script e token da planilha Google">📗 Planilha Google</button>
-                <button id="btn-conn-DEVOLVIDOS" class="btn-conn" style="background:#FFF3E8; border-color:#F47920; color:#B4500F;" onclick="conectarPasta('DEVOLVIDOS')" title="Conecte a pasta onde as colaboradoras colocam os documentos devolvidos (ex.: _DEVOLVIDOS). Pode ficar em qualquer lugar da rede.">↩️ Devolvidos</button>
+                <button id="btn-conn-DEVOLVIDOS" class="btn-conn" style="background:#FFF3E8; border-color:#F47920; color:#B4500F;" onclick="conectarPasta('DEVOLVIDOS')" title="Conecte a pasta onde as colaboradoras colocam os documentos devolvidos (ex.: _DEVOLVIDOS). Pode ficar em qualquer lugar da rede.">↩️ Devolvidos</button><button class="btn-conn" style="background:#fff; border-color:#F47920; color:#B4500F;" onclick="criarPastasDevolucao()" title="Cria _SUBSTITUIDOS e _CANCELADOS dentro da pasta de devolvidos e autoriza este computador a mover os PDFs antigos">📁 Preparar Devolvidos</button>
                 <button id="btn-conn-ASTEN" class="btn-conn" style="background:#fff8e1; border-color:#f9a825; color:#8d6e00;" onclick="conectarPasta('ASTEN')" title="Pasta onde ficam os relatórios Excel da Asten, salvos por dia">📊 Relatório Asten</button>
 
                 <div class="divisor-v"></div>
@@ -1847,16 +1847,27 @@
         }
         return false;
     }
+    // Prepara a estrutura de devolvidos: usa a pasta ↩️ Devolvidos conectada; senão, a subpasta da Origem cujo
+    // nome contém "DEVOLVID" (aproveita a que já existe); só cria "_DEVOLVIDOS" se não houver nenhuma.
+    // Dentro dela cria _SUBSTITUIDOS e _CANCELADOS e já deixa a GRAVAÇÃO autorizada (o clique é o gesto exigido).
     async function criarPastasDevolucao() {
-        const root = conexoes["ORIGEM"];
-        if (!root) { alert('Conecte primeiro a pasta Origem.'); return; }
         try {
-            if ((await root.requestPermission({ mode: 'readwrite' })) !== 'granted') { alert('Permissão de gravação negada. As pastas não foram criadas.'); return; }
-            const dev = await root.getDirectoryHandle(PASTA_DEVOLVIDOS, { create: true });
-            _cacheDevolvidos = { handle: dev, verificadoEm: Date.now() };
-            for (const sp of [PASTA_SUBSTITUIDOS, PASTA_CANCELADOS]) { try { await dev.getDirectoryHandle(sp, { create: true }); } catch (e) {} }
-            alert(`Pasta criada: Origem\\${PASTA_DEVOLVIDOS}\n\nOriente a equipe:\n• Quem lança: ao achar divergência, mover o PDF para _DEVOLVIDOS.\n• Quem baixou do Asten: corrigir e mover de volta para a Origem — OU, se o fornecedor reemitiu a nota, só colocar a nota nova na Origem e deixar a antiga em _DEVOLVIDOS (NÃO apagar).\n• O Monitor move sozinho a antiga para _SUBSTITUIDOS; nota cancelada vai para _CANCELADOS ao clicar em \"Encerrar sem substituto\".\n\nO motivo é descoberto sozinho pelo campo do nome que foi corrigido.`);
-        } catch (e) { alert('Não foi possível criar as pastas: ' + (e && e.message || e)); }
+            let dev = conexoes["DEVOLVIDOS"] || null, onde = '';
+            if (dev) onde = dev.name;
+            else {
+                const root = conexoes["ORIGEM"];
+                if (!root) { alert('Conecte primeiro a pasta Origem (ou a pasta ↩️ Devolvidos).'); return; }
+                if ((await root.requestPermission({ mode: 'readwrite' })) !== 'granted') { alert('Permissão de gravação negada. Nada foi criado.'); return; }
+                for await (const h of root.values()) if (h.kind === 'directory' && normalizarNome(h.name).includes('DEVOLVID')) { dev = h; break; }
+                if (!dev) dev = await root.getDirectoryHandle(PASTA_DEVOLVIDOS, { create: true });
+                onde = root.name + '\\' + dev.name;
+                _cacheDevolvidos = { handle: dev, verificadoEm: Date.now() };
+            }
+            if ((await dev.requestPermission({ mode: 'readwrite' })) !== 'granted') { alert('Permissão de gravação negada. Nada foi criado.'); return; }
+            for (const sp of [PASTA_SUBSTITUIDOS, PASTA_CANCELADOS]) await dev.getDirectoryHandle(sp, { create: true });
+            _baseDevolvidos = dev; _falhasOrganizar = {}; _avisoOrganizarFechado = false;
+            alert(`Pronto: ${onde}\n   ├─ ${PASTA_SUBSTITUIDOS}\n   └─ ${PASTA_CANCELADOS}\n\nEste computador já está autorizado a mover os PDFs antigos sozinho.\n\nOriente a equipe:\n• Quem lança: ao achar divergência, mover o PDF para ${dev.name} (solto, sem criar outras subpastas).\n• Quem baixou do Asten: corrigir e mover de volta para a Origem — OU, se o fornecedor reemitiu a nota, colocar a nota nova na Origem e deixar a antiga em ${dev.name} (NÃO apagar).\n• Nota cancelada: clicar no chip ↩️ → "Encerrar sem substituto".`);
+        } catch (e) { alert('Não foi possível preparar as pastas: ' + (e && e.message || e)); }
     }
 
     function atualizarFluxoComHistorico(item, novoFluxo, agora, respAtual) {
@@ -2134,7 +2145,7 @@
     // arquivo está arquivado em "07.JULHO/07.07", nunca era encontrada. Preenchido uma única vez ao
     // entrar no modo "Localizar Pendências" — não a cada ciclo de 1s, porque são dezenas de pastas.
     let arquivosFinalDatasAntigas = new Set();
-    const _tentDataFinal = {};
+    const _tentDataFinal = {}, _ignoradosMadrugada = new Set();
     // nome do arquivo -> data (ISO) da subpasta de Lançados onde ele foi realmente encontrado.
     // É essa data que vale para ler o metadado e registrar quando o lançamento foi concluído.
     let pastaOndeAchou = {};
@@ -3833,6 +3844,10 @@
     // próprio arquivo, "lastModified"), em vez de usar o momento em que o app percebeu a mudança —
     // que pode ser bem depois, se o app tiver ficado fechado ou a varredura tiver demorado a notar.
     // Retorna um timestamp (epoch ms) ou null se não conseguir localizar/ler o arquivo.
+    // "Modificado em" exatamente no 1º minuto do dia (00:00:xx) não é hora de lançamento: é carimbo de
+    // ZIP/download do Asten, cópia de backup ou sincronização. Tratar como data real fazia o documento
+    // aparecer "lançado à meia-noite" mesmo sem ninguém mexer nas pastas.
+    function mtimeConfiavel(ms) { if (!ms) return false; const d = new Date(ms); return !(d.getHours() === 0 && d.getMinutes() === 0); }
     async function obterDataRealDoArquivo(rootHandle, nomeArquivo, dataAlvoIso) {
         if (!rootHandle) return null;
         try {
@@ -4423,7 +4438,9 @@
     function detectarDivergencias(info, rs, tipoMatch) {
         const dv = [];
         if (tipoMatch === 'NF') dv.push(`CNPJ diverge: arquivo ${info.cnpj} × Solus ${rs.cnpj || '(vazio)'}`);
-        if (tipoMatch === 'VALOR') dv.push(`NF diverge: arquivo ${info.nf} × Solus ${rs.nf || '(vazio)'}`);
+        if (tipoMatch === 'VALOR' || tipoMatch === 'CNPJ_IGUAL') dv.push(`NF diverge: arquivo ${info.nf} × Solus ${rs.nf || '(vazio)'}`);
+        if (tipoMatch === 'NF_IGUAL') dv.push(`CNPJ diverge: arquivo ${info.cnpj} × Solus ${rs.cnpj || '(vazio)'}`);
+        if (tipoMatch === 'CNPJ_IGUAL' || tipoMatch === 'NF_IGUAL') dv.push('Provável erro de digitação em mais de um campo no Solus — conferir o lançamento');
         if (rs.cnpj && !validarDocumento(rs.cnpj)) dv.push(`CNPJ/CPF do Solus (${rs.cnpj}) com dígito verificador inválido`);
         if (info.cnpj && !validarDocumento(info.cnpj)) dv.push(`CNPJ/CPF do nome do arquivo (${info.cnpj}) com dígito verificador inválido`);
         if (info.fornecedor && rs.prestador && !fornecedorConfere(info.fornecedor, rs.prestador)) {
@@ -4497,6 +4514,20 @@
         lancados.filter(c => c.match === undefined).forEach(c => { const i = acharSolus(r => r.nf === c.info.nf && (eqValor(r, c.info) || (r.prestador && fornecedorConfere(r.prestador, c.info.fornecedor) && similaridadeTexto(r.prestador, c.info.fornecedor) >= 0.75))); if (i >= 0) { usados.add(i); c.match = i; c.tipo = 'NF'; } });
         // Passo 3: mesmo CNPJ + mesmo valor → NF digitada errada
         lancados.filter(c => c.match === undefined).forEach(c => { const i = acharSolus(r => r.cnpj === c.info.cnpj && eqValor(r, c.info) && r.valor > 0); if (i >= 0) { usados.add(i); c.match = i; c.tipo = 'VALOR'; } });
+        // Passo 4: DOIS campos digitados errados no Solus (o nome do arquivo vem do Asten = referência).
+        // Só casa quando o par é ÚNICO — um arquivo sem par e um registro do Solus sem par com o mesmo CNPJ
+        // (NF e valor errados) ou com a mesma NF (CNPJ e valor errados). Antes viravam "Não Lançado" +
+        // "Sem Arquivo" separados, sem dizer que eram o mesmo documento.
+        const semPar = () => lancados.filter(c => c.match === undefined);
+        const livres = () => solus.map((r, idx) => ({ r, idx })).filter(x => !usados.has(x.idx));
+        [['cnpj', 'CNPJ_IGUAL'], ['nf', 'NF_IGUAL']].forEach(([campo, tipo]) => {
+            semPar().forEach(c => {
+                const val = c.info[campo]; if (!val) return;
+                const cands = livres().filter(x => x.r[campo] === val);
+                const rivais = semPar().filter(o => o !== c && o.info[campo] === val);
+                if (cands.length === 1 && !rivais.length) { usados.add(cands[0].idx); c.match = cands[0].idx; c.tipo = tipo; }
+            });
+        });
 
         const avisosDup = (info) => { const out = []; const q = contArq[k(info.cnpj, info.nf)]; if (q > 1) out.push(`Mesma NF+CNPJ em ${q} arquivos — possível duplicidade de documento`); return out; };
 
@@ -4880,13 +4911,27 @@
                             // usa a data/hora REAL de gravação do arquivo em disco desde já, ao invés de
                             // "agora" — reflete quando ele realmente chegou em Lançados, não quando o app
                             // percebeu (que pode ser bem depois, se o app ficou fechado até então).
-                            const dataRealMs = f in datasReaisNovosPreCarregadas ? datasReaisNovosPreCarregadas[f] : await obterDataRealDoArquivo(conexoes["FINAL"], f, dataAlvoIso);
+                            const mtimeBruto = f in datasReaisNovosPreCarregadas ? datasReaisNovosPreCarregadas[f] : await obterDataRealDoArquivo(conexoes["FINAL"], f, dataAlvoIso);
+                            const carimboMeiaNoite = !!mtimeBruto && !mtimeConfiavel(mtimeBruto);
+                            const dataRealMs = carimboMeiaNoite ? now : mtimeBruto;
                             // Sem a data real do arquivo, NÃO registra de cara como "lançado agora": tenta de novo
                             // nos próximos ciclos (rede lenta, virada da meia-noite). Antes, documentos antigos
                             // entravam como DIRETO às 00:00 do dia seguinte e inflavam o dia.
                             if (!dataRealMs) { _tentDataFinal[f] = (_tentDataFinal[f] || 0) + 1; if (_tentDataFinal[f] < 5) continue; }
                             delete _tentDataFinal[f];
                             const momentoRealNovo = dataRealMs || now;
+                            // Arquivo ANTIGO (data do nome > 30 dias antes) que só "apareceu" na madrugada (00h–06h):
+                            // não é lançamento de hoje — é rotina do servidor/backup mexendo na pasta ou o Monitor
+                            // aberto na virada do dia. Antes virava DIRETO/CONCILIADO com hora 00:00:0x.
+                            {
+                                const hMad = carimboMeiaNoite ? 0 : new Date(momentoRealNovo).getHours();
+                                const pn = parseNomeArquivo(f), dn = pn && pn.data ? pn.data.split('/') : null;
+                                const tsNome = dn ? new Date(+dn[2], +dn[1] - 1, +dn[0]).getTime() : null;
+                                if (hMad < 6 && tsNome && momentoRealNovo - tsNome > 30 * 86400000) {
+                                    if (!_ignoradosMadrugada.has(f)) { _ignoradosMadrugada.add(f); console.warn(`Ignorado (arquivo antigo visto na madrugada): ${f}`); }
+                                    continue;
+                                }
+                            }
                             const { d: dRealNovo, h: hRealNovo } = formatarDataHoraDeTimestamp(momentoRealNovo);
                             const fluxoInicial = respDetectado !== '-' ? "FINALIZADO" : "DIRETO";
                             db[f] = {
@@ -4978,7 +5023,8 @@
                                 // no "agora": a linha de julho era regravada com a data de hoje e ganhava um
                                 // SLA de dezenas de dias. Quando o metadado realmente não pode ser lido, é
                                 // melhor preservar a data original do que inventar a de hoje.
-                                const dataRealMs = n in datasReaisPreCarregadas ? datasReaisPreCarregadas[n] : await obterDataRealDoArquivo(conexoes["FINAL"], n, isoDoItem(n, dataAlvoIso));
+                                const mtimeLido = n in datasReaisPreCarregadas ? datasReaisPreCarregadas[n] : await obterDataRealDoArquivo(conexoes["FINAL"], n, isoDoItem(n, dataAlvoIso));
+                                const dataRealMs = mtimeConfiavel(mtimeLido) ? mtimeLido : null; // carimbo 00:00 = preserva a data original
                                 const momentoReal = dataRealMs || now;
                                 db[n].a = "CONCILIADO";
                                 db[n].ts_out = dataRealMs ? momentoReal : null;
