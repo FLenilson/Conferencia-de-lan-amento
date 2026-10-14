@@ -1759,9 +1759,49 @@
         const it = db[nome]; if (it) { it.arquivadoEm = Date.now(); it.arquivadoEmPasta = destino + (nomeFinal !== nome ? ' (' + nomeFinal + ')' : ''); }
         return true;
     }
+    const _soDig = v => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
+    const _lancadosRemotos = { mapa: {}, em: 0, chaves: '' }, _chavesConsultar = new Set();
+    async function consultarLancadosRemotos() {
+        if (!GS_CONFIG.ativo || !GS_CONFIG.webAppUrl || !_chavesConsultar.size) return;
+        const chaves = [..._chavesConsultar].sort().join(',');
+        _chavesConsultar.clear();
+        if (chaves === _lancadosRemotos.chaves && Date.now() - _lancadosRemotos.em < 300000) return; // mesma pergunta há menos de 5 min
+        _lancadosRemotos.chaves = chaves; _lancadosRemotos.em = Date.now();
+        try {
+            const r = await fetch(`${GS_CONFIG.webAppUrl}?token=${encodeURIComponent(GS_CONFIG.token)}&fonte=lancados_nf&chaves=${encodeURIComponent(chaves)}`);
+            const j = await r.json();
+            if (!j.ok) return;
+            const m = {}; (j.registros || []).forEach(x => (m[x.chave] = m[x.chave] || []).push(x.arquivo));
+            _lancadosRemotos.mapa = m;
+        } catch (e) { console.warn('Consulta de notas já lançadas na planilha falhou:', e); }
+    }
     async function organizarDevolvidos(mapa) {
         if (_organizando || !mapa || !_baseDevolvidos) return false;
         let mudou = false;
+        // Devolvido cuja nota (mesmo CNPJ + NF) JÁ FOI LANÇADA por outro arquivo (cópia "(1)", nota reemitida que foi direto
+        // para Lançados etc.): o caso está resolvido — arquiva o PDF parado em _DEVOLVIDOS e tira das pendências.
+        const lancadosPorChave = {};
+        for (const n in db) { const it = db[n]; if (!it || it.apagado || it.a !== 'CONCILIADO') continue; const i = infoDoItem(n); if (i.cnpj && i.nf) (lancadosPorChave[i.cnpj + '|' + normalizarNF(i.nf)] = lancadosPorChave[i.cnpj + '|' + normalizarNF(i.nf)] || []).push(n); }
+        for (const n of mapa.keys()) {
+            const it = db[n]; if (!it || it.apagado || it.a === 'CONCILIADO') continue;
+            const i = infoDoItem(n); if (!i.cnpj || !i.nf) continue;
+            let outro = (lancadosPorChave[i.cnpj + '|' + normalizarNF(i.nf)] || []).find(o => o !== n);
+            // Não achou neste computador (a cópia foi lançada em outro dia / outro micro): pergunta à planilha
+            if (!outro) { const kr = _soDig(i.cnpj) + '|' + _soDig(i.nf); outro = (_lancadosRemotos.mapa[kr] || []).find(o => o !== n); if (!outro) { _chavesConsultar.add(i.cnpj + '|' + i.nf); continue; } }
+            const ca = camposDoNome(n), cb = camposDoNome(outro);
+            const dif = ca && cb ? CAMPOS_COMPARADOS.filter(c => (ca[c] || '') !== (cb[c] || '')) : [];
+            if (!Array.isArray(it.devolucoes)) it.devolucoes = [];
+            if (!it.devolucoes.length) registrarDevolucao(it, it.resp !== '-' ? it.resp : 'NÃO IDENTIFICADA', Date.now(), { viaPasta: true });
+            const ult = it.devolucoes[it.devolucoes.length - 1], agora = Date.now();
+            if (!ult.motivo || ult.motivoAuto) { ult.motivo = dif.length ? motivoPelosCampos(dif) || 'Nota substituída (reemitida)' : 'Documento duplicado'; ult.motivoAuto = true; if (dif.length) ult.camposAlterados = dif; }
+            if (!ult.corrigidoEm) { ult.corrigidoEm = agora; ult.tempoCorrecaoMin = Math.round(msUteis(ult.em, agora) / 60000); }
+            ult.substituido = true; ult.substituidoPor = outro;
+            delete it.naPastaDevolvidos; delete it.aguardandoSubst;
+            it.apagado = true; it.substituidoPor = outro; it.motivoExclusao = dif.length ? 'Substituído por nota já lançada' : 'Cópia duplicada — a outra já foi lançada';
+            filaSincronizacao.add(n); mudou = true;
+            console.log(`_DEVOLVIDOS: "${n}" resolvido — mesma NF/CNPJ já lançada em "${outro}"`);
+        }
+        consultarLancadosRemotos();
         const pend = [...mapa.keys()].map(n => ({ nome: n, destino: destinoArquivoMorto(n) })).filter(x => x.destino);
         // Cancelado em OUTRO computador (veio pela planilha): some das pendências aqui também
         pend.forEach(x => { if (x.destino === PASTA_CANCELADOS && db[x.nome] && !db[x.nome].apagado) { db[x.nome].apagado = true; delete db[x.nome].naPastaDevolvidos; delete db[x.nome].aguardandoSubst; filaSincronizacao.add(x.nome); mudou = true; } });
@@ -2057,7 +2097,9 @@
             // LANÇAMENTOS do dia, e cada um virava um "Sem Arquivo" falso (centenas de alertas).
             return (json.registros || []).filter(r => r && (r.nf || r.cnpj) && r.arquivo === undefined).map(r => ({
                 nf: normalizarNF(r.nf), cnpj: normalizarCNPJ(r.cnpj), prestador: String(r.prestador || ''),
-                vencimento: normalizarDataBR(r.vencimento), valor: parseValorBR(r.valor), linhaOrigem: r.linhaOrigem || ''
+                vencimento: normalizarDataBR(r.vencimento), valor: parseValorBR(r.valor), linhaOrigem: r.linhaOrigem || '',
+                valorTotal: r.valorTotal !== '' && r.valorTotal != null ? parseValorBR(r.valorTotal) : undefined, dataLanc: r.dataLanc || '',
+                fontePdf: r.fonte === 'PDF' || !normalizarCNPJ(r.cnpj), nfTruncada: (r.fonte === 'PDF' || !normalizarCNPJ(r.cnpj)) && normalizarNF(r.nf).length >= 10
             }));
         } catch (e) {
             console.error("Erro ao buscar snapshot remoto do Solus:", e);
@@ -4061,6 +4103,7 @@
     const _falhasLeitura = {};
 
     function processarForcado() {
+        for (const k in _cacheBuscaSolus) delete _cacheBuscaSolus[k]; // "Atualizar Agora" procura o relatório Solus de novo
         if(!isProcessing) processar();
     }
 
@@ -4254,15 +4297,23 @@
         let linhaCab = 0, cab = [];
         for (let i = 0; i < Math.min(15, linhas.length); i++) {
             const c = (linhas[i] || []).map(norm);
-            if (c.some(h => h.includes('CNPJ') || h.includes('CPF')) && c.some(h => /(^| )(NF|NFE|NOTA|DOCUMENTO|NUMERO|N)( |$)/.test(h) || h.includes('NOTA FISCAL'))) { linhaCab = i; cab = c; break; }
+            const temNF = c.some(h => /(^| )(NF|NFE|NOTA|DOCUMENTO|NUMERO|N)( |$)/.test(h) || h.includes('NOTA FISCAL'));
+            if (temNF && (c.some(h => h.includes('CNPJ') || h.includes('CPF')) || (c.some(h => h.includes('FORNECEDOR') || h.includes('PRESTADOR')) && c.some(h => h.includes('LIQUIDO') || h.includes('VALOR') || h.includes('TOTAL'))))) { linhaCab = i; cab = c; break; }
         }
         if (!cab.length) { cab = (linhas[0] || []).map(norm); linhaCab = 0; }
         const idxNF = achar(cab, [h => h === 'NF' || h === 'NFE' || h === 'NF E', h => h.includes('NOTA FISCAL') || h === 'NOTA', h => /^(N|NUM|NUMERO|NRO|NO) (DA )?(NF|NOTA|DOC|DOCUMENTO)/.test(h), h => h === 'DOCUMENTO' || h === 'NUMERO' || h === 'N DOCUMENTO']);
         const idxCNPJ = achar(cab, [h => h.includes('CNPJ'), h => h.includes('CPF')]);
         const idxPrestador = achar(cab, [h => h.includes('PRESTADOR'), h => h.includes('FORNECEDOR'), h => h.includes('RAZAO SOCIAL'), h => h.includes('FAVORECIDO'), h => h === 'NOME']);
         const idxVenc = achar(cab, [h => h.includes('VENCIMENTO'), h => h === 'VENC' || h.startsWith('DT VENC')]);
-        const idxValor = achar(cab, [h => h.includes('VALOR') && h.includes('LIQ'), h => h.includes('VLR') && h.includes('LIQ'), h => h === 'VALOR' || h === 'VLR' || h === 'VALOR R', h => h.includes('VALOR') && !h.includes('BRUTO') && !h.includes('DESC') && !h.includes('IMPOSTO') && !h.includes('RET'), h => h.includes('VALOR')]);
-        if (idxNF < 0 || idxCNPJ < 0) console.warn('Relatório Solus: coluna de NF ou CNPJ não identificada no cabeçalho:', cab);
+        const idxTotal = achar(cab, [h => h.includes('TOTAL'), h => h.includes('BRUTO')]);
+        const idxEstab = achar(cab, [h => h.includes('ESTABELECIMENTO') || h.includes('UNIDADE')]);
+        const idxTipoPg = achar(cab, [h => h === 'TIPO' || h.includes('FORMA')]);
+        const idxUser = achar(cab, [h => h.includes('USUARIO')]);
+        let dataLancRel = '';
+        for (let i = 0; i < Math.min(15, linhas.length); i++) { const m = norm((linhas[i] || []).join(' ')).match(/DATA DE LANCAMENTO (\d{2}) (\d{2}) (\d{4})/); if (m) { dataLancRel = `${m[1]}/${m[2]}/${m[3]}`; break; } }
+        const idxValor = achar(cab, [h => h.includes('VALOR') && h.includes('LIQ'), h => h === 'LIQUIDO' || h.includes('LIQUIDO'), h => h.includes('VLR') && h.includes('LIQ'), h => h === 'VALOR' || h === 'VLR' || h === 'VALOR R', h => h.includes('VALOR') && !h.includes('BRUTO') && !h.includes('DESC') && !h.includes('IMPOSTO') && !h.includes('RET'), h => h.includes('VALOR')]);
+        if (idxNF < 0) console.warn('Relatório Solus: coluna de NF não identificada no cabeçalho:', cab);
+        const semCnpj = idxCNPJ < 0; // "Protocolo Sintético": sem CNPJ, fornecedor com 20 letras, NF com até 10 dígitos
 
         for (let i = linhaCab + 1; i < linhas.length; i++) {
             const linha = linhas[i] || [];
@@ -4274,10 +4325,132 @@
                 prestador: idxPrestador >= 0 ? String(linha[idxPrestador] || '').trim() : '',
                 vencimento: idxVenc >= 0 ? normalizarDataBR(linha[idxVenc]) : '',
                 valor: idxValor >= 0 ? parseValorBR(linha[idxValor]) : 0,
+                valorTotal: idxTotal >= 0 && idxTotal !== idxValor ? parseValorBR(linha[idxTotal]) : undefined,
+                estabelecimento: idxEstab >= 0 ? String(linha[idxEstab] || '').trim() : '', formaPagamento: idxTipoPg >= 0 ? String(linha[idxTipoPg] || '').trim() : '',
+                usuario: idxUser >= 0 ? String(linha[idxUser] || '').trim() : '', dataLanc: dataLancRel,
+                fontePdf: semCnpj, nfTruncada: semCnpj && String(linha[idxNF] ?? '').replace(/\D/g, '').length >= 10,
                 linhaOrigem: i + 1
             });
         }
         return registros;
+    }
+
+    // ===== RELATÓRIO SOLUS EM PDF ("PROTOCOLO SINTÉTICO LANÇAMENTO DOCUMENTO") =====
+    // O PDF não traz CNPJ, corta o fornecedor em 20 letras e a NF em 10 dígitos. Antes o Monitor tentava abrir o PDF
+    // como Excel, não achava nada e mostrava "Aguardando relatório" — nenhuma divergência era apontada.
+    let _pdfJsPromessa = null;
+    function carregarPdfJs() {
+        if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+        if (_pdfJsPromessa) return _pdfJsPromessa;
+        _pdfJsPromessa = new Promise((ok, falha) => {
+            const sc = document.createElement('script');
+            sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            sc.onload = () => { try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; ok(window.pdfjsLib); } catch (e) { falha(e); } };
+            sc.onerror = () => { _pdfJsPromessa = null; falha(new Error('Não foi possível carregar o leitor de PDF (sem internet?)')); };
+            document.head.appendChild(sc);
+        });
+        return _pdfJsPromessa;
+    }
+    async function linhasDoPdfSolus(pdf) {
+        const linhas = [];
+        for (let p = 1; p <= pdf.numPages; p++) {
+            const pg = await pdf.getPage(p); const tc = await pg.getTextContent();
+            const porY = new Map();
+            tc.items.forEach(it => {
+                const s = (it.str || '').trim(); if (!s) return;
+                const y = Math.round(it.transform[5]), x = it.transform[4];
+                let k = [...porY.keys()].find(v => Math.abs(v - y) <= 2); if (k === undefined) { k = y; porY.set(k, []); }
+                const arr = porY.get(k);
+                if (!arr.some(o => o.s === s && Math.abs(o.x - x) < 3)) arr.push({ x, s }); // o Solus escreve cada texto 2x (negrito)
+            });
+            [...porY.entries()].sort((a, b) => b[0] - a[0]).forEach(([, its]) => linhas.push(its.sort((a, b) => a.x - b.x)));
+        }
+        return linhas;
+    }
+    function registrosDoPdfSolus(linhas) {
+        const norm = t => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+        const num = v => +v.replace(/\./g, '').replace(',', '.');
+        let dataLanc = '', cab = null; const regs = [];
+        for (const its of linhas) {
+            const txt = its.map(i => i.s).join(' ').replace(/\s+/g, ' ');
+            const mL = norm(txt).match(/DATA DE LANCAMENTO:?\s*(\d{2}\/\d{2}\/\d{4})/); if (mL) { dataLanc = mL[1]; continue; }
+            if (!cab && /FORNECEDOR/.test(norm(txt)) && /VENC/.test(norm(txt))) {
+                const pos = n => { const it = its.find(i => norm(i.s).startsWith(n)); return it ? it.x : null; };
+                cab = { tipo: pos('TIPO'), forn: pos('FORNECEDOR') }; continue;
+            }
+            if (!cab) continue;
+            const parte = (a, b) => its.filter(i => (a == null || i.x >= a - 2) && (b == null || i.x < b - 2)).map(i => i.s).join(' ').replace(/\s+/g, ' ').trim();
+            const m = parte(cab.forn, null).match(/^(.*?)\s+(\S+)\s+R\$\s*([\d.]+,\d{2})\s+R\$\s*([\d.]+,\d{2})\s+(\d{2}\/\d{2}\/\d{4})\s*(\S*)$/);
+            if (!m) continue;
+            const nf = normalizarNF(m[2]);
+            regs.push({ nf, nfTruncada: String(m[2]).replace(/\D/g, '').length >= 10, cnpj: '', prestador: m[1].trim(), vencimento: m[5], valor: num(m[4]), valorTotal: num(m[3]),
+                        dataLanc, estabelecimento: parte(null, cab.tipo), formaPagamento: parte(cab.tipo, cab.forn), usuario: m[6], fontePdf: true, linhaOrigem: regs.length + 1 });
+        }
+        return regs;
+    }
+    async function lerSolusPdf(file) {
+        const lib = await carregarPdfJs();
+        const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+        return registrosDoPdfSolus(await linhasDoPdfSolus(pdf));
+    }
+
+    // Lê TODOS os relatórios do dia na pasta Solus (ex.: RELATORIO_DIARIO.xlsx e RELATORIO_FINAL.pdf) e junta.
+    // O "diário" pode ter sido tirado antes do fim do dia: usar só um deles escondia lançamentos.
+    async function lerArquivoSolus(handle) {
+        const file = await handle.getFile();
+        if (/\.pdf$/i.test(handle.name)) return { file, registros: await lerSolusPdf(file) };
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+        const linhas = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: '', raw: true });
+        return { file, registros: extrairRegistrosSolus(linhas) };
+    }
+    function chaveRegSolus(r) { return [r.cnpj || '', r.nf, normalizarTexto(r.prestador).slice(0, 18), Number(r.valor || 0).toFixed(2), normalizarDataBR(r.vencimento)].join('|'); }
+    function juntarRelatoriosSolus(lista) {
+        // Mesmo lançamento nos dois relatórios = 1 só; lançamento repetido DENTRO do mesmo relatório continua repetido (duplicidade real)
+        const final = [], usados = {};
+        lista.forEach(({ nome, registros }) => {
+            const vistosAqui = {};
+            registros.forEach(r => {
+                const k = chaveRegSolus(r);
+                vistosAqui[k] = (vistosAqui[k] || 0) + 1;
+                if ((usados[k] || 0) >= vistosAqui[k]) return; // já veio de outro relatório
+                usados[k] = (usados[k] || 0) + 1;
+                final.push(Object.assign({}, r, { relatorio: nome, linhaOrigem: final.length + 1 }));
+            });
+        });
+        return final;
+    }
+    // Procura o(s) relatório(s) do dia em QUALQUER subpasta da pasta Solus (ex.: SOLUS\2026\09 SETEMBRO\RELATORIO_DIARIO_02.09.2026.xlsx).
+    // Usa o Excel; o PDF só entra se não houver Excel daquela data. Resultado guardado por 5 min (rede não é varrida a cada 2 s).
+    const _cacheBuscaSolus = {};
+    async function localizarRelatoriosSolus(raiz, dataIso) {
+        const c = _cacheBuscaSolus[dataIso];
+        if (c && Date.now() - c.em < (c.lista.length ? 300000 : 60000)) return c.lista;
+        const ext = /\.(xlsx?|xlsm|csv|pdf)$/i, achados = [];
+        const anoAlvo = dataIso.slice(0, 4);
+        async function varrer(dir, prof) {
+            const subs = [];
+            for await (const h of dir.values()) {
+                if (h.kind === 'file') { if (arquivoValido(h.name) && ext.test(h.name) && pastaCorrespondeAData(h.name, dataIso)) achados.push(h); }
+                else if (prof < 5) subs.push(h);
+            }
+            for (const d of subs) {
+                // não entra em pasta de OUTRO ano (ex.: "2025") — evita varrer anos inteiros na rede
+                const ano = (d.name.match(/\b(20\d{2})\b/) || [])[1];
+                if (ano && ano !== anoAlvo) continue;
+                try { await varrer(d, prof + 1); } catch (e) { /* subpasta sem acesso: ignora */ }
+            }
+        }
+        await varrer(raiz, 0);
+        // Pasta do dia sem a data no nome do arquivo (ex.: SOLUS\2026\09\02\relatorio.xlsx)
+        if (!achados.length) {
+            const pd = await encontrarPastaDoDia(raiz, dataIso);
+            if (pd) for await (const h of pd.values()) if (h.kind === 'file' && arquivoValido(h.name) && ext.test(h.name)) achados.push(h);
+        }
+        const excel = achados.filter(h => !/\.pdf$/i.test(h.name));
+        const lista = excel.length ? excel : achados;
+        _cacheBuscaSolus[dataIso] = { em: Date.now(), lista };
+        return lista;
     }
 
     async function obterRegistrosSolus(dataAlvoIso) {
@@ -4288,42 +4461,25 @@
         }
         try {
             await verifyPermission(conexoes["SOLUS"]);
-            let arquivoAlvo = null;
-            for await (const handle of conexoes["SOLUS"].values()) {
-                if (handle.kind === 'file' && arquivoValido(handle.name) && pastaCorrespondeAData(handle.name, dataAlvoIso)) {
-                    arquivoAlvo = handle; break;
-                }
+            let alvos = await localizarRelatoriosSolus(conexoes["SOLUS"], dataAlvoIso);
+            if (!alvos.length) { solusFonteRemota = false; return []; }
+            const assinatura = [];
+            for (const h of alvos) { const f = await h.getFile(); assinatura.push(h.name + ':' + f.lastModified); }
+            const sig = assinatura.sort().join('|');
+            if (_solusCache.dataIso === dataAlvoIso && _solusCache.nomeArquivo === sig) { solusFonteRemota = false; return _solusCache.registros; }
+            const lidos = [];
+            for (const h of alvos) {
+                try { const { registros } = await lerArquivoSolus(h); lidos.push({ nome: h.name, registros }); }
+                catch (eArq) { console.warn(`Relatório Solus "${h.name}" não pôde ser lido:`, eArq); }
             }
-            // Mesma lógica do Asten: se não achou na raiz, procura dentro da subpasta do dia.
-            if (!arquivoAlvo) {
-                const pastaDoDiaSolus = await encontrarPastaDoDia(conexoes["SOLUS"], dataAlvoIso);
-                if (pastaDoDiaSolus) {
-                    for await (const handle of pastaDoDiaSolus.values()) {
-                        if (handle.kind === 'file' && arquivoValido(handle.name) && pastaCorrespondeAData(handle.name, dataAlvoIso)) {
-                            arquivoAlvo = handle; break;
-                        }
-                    }
-                    if (!arquivoAlvo) {
-                        for await (const handle of pastaDoDiaSolus.values()) {
-                            if (handle.kind === 'file' && arquivoValido(handle.name)) {
-                                if (arquivoAlvo) { arquivoAlvo = null; break; }
-                                arquivoAlvo = handle;
-                            }
-                        }
-                    }
-                }
+            // O relatório com mais linhas primeiro (normalmente o FINAL)
+            lidos.sort((a, b) => b.registros.length - a.registros.length);
+            const registros = juntarRelatoriosSolus(lidos);
+            if (lidos.length > 1) {
+                const n0 = lidos[0].registros.length;
+                lidos.slice(1).forEach(l => { if (l.registros.length !== n0) console.warn(`Relatórios Solus do dia com tamanhos diferentes: ${lidos[0].nome} (${n0}) × ${l.nome} (${l.registros.length}) — usando a união (${registros.length}).`); });
             }
-            if (!arquivoAlvo) { solusFonteRemota = false; return []; }
-            const file = await arquivoAlvo.getFile();
-            if (_solusCache.dataIso === dataAlvoIso && _solusCache.nomeArquivo === arquivoAlvo.name && _solusCache.mtime === file.lastModified) {
-                solusFonteRemota = false;
-                return _solusCache.registros;
-            }
-            const buffer = await file.arrayBuffer();
-            const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
-            const linhas = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: '', raw: true });
-            const registros = extrairRegistrosSolus(linhas);
-            _solusCache = { dataIso: dataAlvoIso, nomeArquivo: arquivoAlvo.name, mtime: file.lastModified, registros };
+            _solusCache = { dataIso: dataAlvoIso, nomeArquivo: sig, mtime: null, registros, relatorios: lidos.map(l => ({ nome: l.nome, qtd: l.registros.length })) };
             solusFonteRemota = false;
             sincronizarSolusSnapshot(dataAlvoIso, registros); // envia o retrato pra planilha (não bloqueia a leitura local)
             return registros;
@@ -4432,6 +4588,32 @@
         return similaridadeTexto(a, b) >= 0.75;
     }
 
+    // ----- Comparação com relatório Solus em PDF (sem CNPJ, fornecedor com 20 letras, NF com 10 dígitos) -----
+    function nfCompativel(rs, info) {
+        const a = normalizarNF(rs.nf), b = normalizarNF(info.nf);
+        if (!a || !b || a === '0' || b === '0') return false;
+        return rs.nfTruncada ? b.startsWith(a) : a === b;
+    }
+    function fornecedorConferePdf(prest, forn) {
+        const a = normalizarTexto(prest), b = normalizarTexto(forn);
+        if (!a || !b) return true;
+        return a.slice(0, 6) === b.slice(0, 6) || fornecedorConfere(prest, forn);
+    }
+    function dataBrParaTs(d) { const p = String(d || '').split('/'); return p.length === 3 ? new Date(+p[2], +p[1] - 1, +p[0]).getTime() : NaN; }
+    // Erros que aparecem só olhando o Solus (sem precisar do arquivo): ano digitado errado, vencimento absurdo.
+    function divergenciasInternasSolus(rs) {
+        const dv = [];
+        const ref = rs.dataLanc || isoParaBr(document.getElementById('data-historico').value || getHojeISO());
+        const tv = dataBrParaTs(normalizarDataBR(rs.vencimento)), tr = dataBrParaTs(ref);
+        if (!isNaN(tv) && !isNaN(tr)) {
+            const dias = Math.round((tv - tr) / 86400000);
+            if (dias > 180) dv.push(`Vencimento improvável no Solus: ${normalizarDataBR(rs.vencimento)} (${dias} dias depois do lançamento em ${ref}) — provável erro de digitação no ano/mês`);
+            else if (dias < -60) dv.push(`Vencimento improvável no Solus: ${normalizarDataBR(rs.vencimento)} (${-dias} dias ANTES do lançamento em ${ref}) — conferir a data`);
+        }
+        if (rs.valorTotal != null && rs.valor > rs.valorTotal + 0.01) dv.push(`Líquido maior que o total no Solus (R$ ${rs.valor.toFixed(2)} × R$ ${rs.valorTotal.toFixed(2)})`);
+        return dv;
+    }
+
     // Lista TODAS as divergências entre o arquivo e o registro do Solus. tipoMatch indica como o par foi
     // encontrado: EXATO (CNPJ+NF), NF (mesma NF, CNPJ diferente → erro de digitação no CNPJ) ou
     // VALOR (mesmo CNPJ e valor, NF diferente → erro de digitação na NF).
@@ -4439,11 +4621,11 @@
         const dv = [];
         if (tipoMatch === 'NF') dv.push(`CNPJ diverge: arquivo ${info.cnpj} × Solus ${rs.cnpj || '(vazio)'}`);
         if (tipoMatch === 'VALOR' || tipoMatch === 'CNPJ_IGUAL') dv.push(`NF diverge: arquivo ${info.nf} × Solus ${rs.nf || '(vazio)'}`);
-        if (tipoMatch === 'NF_IGUAL') dv.push(`CNPJ diverge: arquivo ${info.cnpj} × Solus ${rs.cnpj || '(vazio)'}`);
+        if (tipoMatch === 'NF_IGUAL') dv.push(rs.cnpj ? `CNPJ diverge: arquivo ${info.cnpj} × Solus ${rs.cnpj}` : `Fornecedor do Solus não confere com o arquivo ("${rs.prestador}")`);
         if (tipoMatch === 'CNPJ_IGUAL' || tipoMatch === 'NF_IGUAL') dv.push('Provável erro de digitação em mais de um campo no Solus — conferir o lançamento');
         if (rs.cnpj && !validarDocumento(rs.cnpj)) dv.push(`CNPJ/CPF do Solus (${rs.cnpj}) com dígito verificador inválido`);
         if (info.cnpj && !validarDocumento(info.cnpj)) dv.push(`CNPJ/CPF do nome do arquivo (${info.cnpj}) com dígito verificador inválido`);
-        if (info.fornecedor && rs.prestador && !fornecedorConfere(info.fornecedor, rs.prestador)) {
+        if (info.fornecedor && rs.prestador && !(rs.fontePdf ? fornecedorConferePdf(rs.prestador, info.fornecedor) : fornecedorConfere(info.fornecedor, rs.prestador))) {
             dv.push(`Fornecedor diverge (${Math.round(similaridadeTexto(info.fornecedor, rs.prestador) * 100)}% similar): arquivo "${info.fornecedor}" × Solus "${rs.prestador}"`);
         }
         const dA = normalizarDataBR(info.data), dS = normalizarDataBR(rs.vencimento);
@@ -4455,6 +4637,10 @@
                 else dv.push(`Valor diverge: arquivo R$ ${info.valorLiquido.toFixed(2)} (líquido) × Solus R$ ${rs.valor.toFixed(2)}`);
             }
         } else if (!rs.valor && info.valorLiquido) dv.push('Valor não informado no Solus');
+        // Total da nota (bruto) — o relatório em PDF traz os dois valores
+        if (rs.valorTotal != null && rs.valorTotal > 0 && info.valorBruto != null && Math.abs(rs.valorTotal - info.valorBruto) > 0.01)
+            dv.push(`Valor TOTAL diverge: arquivo R$ ${info.valorBruto.toFixed(2)} (bruto) × Solus R$ ${rs.valorTotal.toFixed(2)}`);
+        divergenciasInternasSolus(rs).forEach(x => { if (!dv.includes(x)) dv.push(x); });
         return dv;
     }
 
@@ -4487,8 +4673,9 @@
         const hojeIso = getHojeISO();
         const k = (c, n) => `${c}|${n}`;
 
+        const kS = r => r.cnpj ? k(r.cnpj, r.nf) : `PDF|${r.nf}|${normalizarTexto(r.prestador)}|${Number(r.valor || 0).toFixed(2)}`;
         const contSolus = {};
-        solus.forEach(r => { contSolus[k(r.cnpj, r.nf)] = (contSolus[k(r.cnpj, r.nf)] || 0) + 1; });
+        solus.forEach(r => { contSolus[kS(r)] = (contSolus[kS(r)] || 0) + 1; });
 
         const contArq = {};
         Object.keys(db).forEach(n => { if (db[n].apagado) return; const i = infoDoItem(n); if (i.cnpj && i.nf) contArq[k(i.cnpj, i.nf)] = (contArq[k(i.cnpj, i.nf)] || 0) + 1; });
@@ -4508,23 +4695,27 @@
 
         const acharSolus = cond => solus.findIndex((r, idx) => !usados.has(idx) && cond(r));
         const eqValor = (r, i) => i.valorLiquido != null && Math.abs(r.valor - i.valorLiquido) <= 0.01 || (i.valorBruto != null && Math.abs(r.valor - i.valorBruto) <= 0.01);
-        // Passo 1: CNPJ + NF exatos (lançados e pendentes)
-        [...lancados, ...pendentes].forEach(c => { const i = acharSolus(r => r.cnpj === c.info.cnpj && r.nf === c.info.nf); if (i >= 0) { usados.add(i); c.match = i; c.tipo = 'EXATO'; } });
+        // Passo 1: CNPJ + NF exatos (lançados e pendentes). Relatório em PDF (sem CNPJ): NF compatível + mesmo valor.
+        [...lancados, ...pendentes].forEach(c => { const i = acharSolus(r => r.cnpj ? (r.cnpj === c.info.cnpj && r.nf === c.info.nf) : (nfCompativel(r, c.info) && eqValor(r, c.info))); if (i >= 0) { usados.add(i); c.match = i; c.tipo = 'EXATO'; } });
+        // Passo 1b (PDF): NF compatível + fornecedor parecido, valor diferente → valor digitado errado
+        [...lancados, ...pendentes].filter(c => c.match === undefined).forEach(c => { const i = acharSolus(r => !r.cnpj && nfCompativel(r, c.info) && r.prestador && fornecedorConferePdf(r.prestador, c.info.fornecedor)); if (i >= 0) { usados.add(i); c.match = i; c.tipo = 'EXATO'; } });
         // Passo 2: mesma NF + (mesmo valor ou fornecedor parecido) → CNPJ digitado errado
-        lancados.filter(c => c.match === undefined).forEach(c => { const i = acharSolus(r => r.nf === c.info.nf && (eqValor(r, c.info) || (r.prestador && fornecedorConfere(r.prestador, c.info.fornecedor) && similaridadeTexto(r.prestador, c.info.fornecedor) >= 0.75))); if (i >= 0) { usados.add(i); c.match = i; c.tipo = 'NF'; } });
+        lancados.filter(c => c.match === undefined).forEach(c => { const i = acharSolus(r => r.cnpj && r.nf === c.info.nf && (eqValor(r, c.info) || (r.prestador && fornecedorConfere(r.prestador, c.info.fornecedor) && similaridadeTexto(r.prestador, c.info.fornecedor) >= 0.75))); if (i >= 0) { usados.add(i); c.match = i; c.tipo = 'NF'; } });
         // Passo 3: mesmo CNPJ + mesmo valor → NF digitada errada
-        lancados.filter(c => c.match === undefined).forEach(c => { const i = acharSolus(r => r.cnpj === c.info.cnpj && eqValor(r, c.info) && r.valor > 0); if (i >= 0) { usados.add(i); c.match = i; c.tipo = 'VALOR'; } });
+        lancados.filter(c => c.match === undefined).forEach(c => { const i = acharSolus(r => (r.cnpj ? r.cnpj === c.info.cnpj : (r.prestador && fornecedorConferePdf(r.prestador, c.info.fornecedor))) && eqValor(r, c.info) && r.valor > 0); if (i >= 0) { usados.add(i); c.match = i; c.tipo = 'VALOR'; } });
         // Passo 4: DOIS campos digitados errados no Solus (o nome do arquivo vem do Asten = referência).
         // Só casa quando o par é ÚNICO — um arquivo sem par e um registro do Solus sem par com o mesmo CNPJ
         // (NF e valor errados) ou com a mesma NF (CNPJ e valor errados). Antes viravam "Não Lançado" +
         // "Sem Arquivo" separados, sem dizer que eram o mesmo documento.
         const semPar = () => lancados.filter(c => c.match === undefined);
         const livres = () => solus.map((r, idx) => ({ r, idx })).filter(x => !usados.has(x.idx));
+        const igualCampo = (campo, r, info) => campo === 'cnpj' ? (r.cnpj ? r.cnpj === info.cnpj : !!(r.prestador && info.fornecedor && fornecedorConferePdf(r.prestador, info.fornecedor)))
+                                                                : (r.cnpj ? r.nf === info.nf : nfCompativel(r, info));
         [['cnpj', 'CNPJ_IGUAL'], ['nf', 'NF_IGUAL']].forEach(([campo, tipo]) => {
             semPar().forEach(c => {
                 const val = c.info[campo]; if (!val) return;
-                const cands = livres().filter(x => x.r[campo] === val);
-                const rivais = semPar().filter(o => o !== c && o.info[campo] === val);
+                const cands = livres().filter(x => igualCampo(campo, x.r, c.info));
+                const rivais = semPar().filter(o => o !== c && igualCampo(campo, cands.length === 1 ? cands[0].r : {}, o.info));
                 if (cands.length === 1 && !rivais.length) { usados.add(cands[0].idx); c.match = cands[0].idx; c.tipo = tipo; }
             });
         });
@@ -4538,7 +4729,7 @@
             } else {
                 const rs = solus[c.match];
                 const dv = detectarDivergencias(c.info, rs, c.tipo).concat(avisosDup(c.info));
-                if ((contSolus[k(rs.cnpj, rs.nf)] || 0) > 1) dv.push(`NF lançada ${contSolus[k(rs.cnpj, rs.nf)]}x no Solus — possível pagamento em duplicidade`);
+                if ((contSolus[kS(rs)] || 0) > 1) dv.push(`NF lançada ${contSolus[kS(rs)]}x no Solus — possível pagamento em duplicidade`);
                 resultado.push(Object.assign(base, { status: dv.length ? 'CONCILIADO_COM_ALERTA' : 'CONCILIADO', divergencias: dv, prestadorSolus: rs.prestador, vencimento: rs.vencimento, valor: rs.valor }));
             }
         });
@@ -4560,22 +4751,24 @@
         // Registros do Solus sem par no recorte atual: procura o arquivo em QUALQUER data antes de acusar "Sem Arquivo"
         let indiceGeral = null;
         const montarIndice = () => { indiceGeral = {}; Object.keys(db).forEach(n => { if (db[n].apagado) return; const i = infoDoItem(n); if (i.cnpj && i.nf) (indiceGeral[k(i.cnpj, i.nf)] = indiceGeral[k(i.cnpj, i.nf)] || []).push(n); }); };
-        const chavesCasadas = new Set(solus.filter((r, idx) => usados.has(idx)).map(r => k(r.cnpj, r.nf)));
+        const chavesCasadas = new Set(solus.filter((r, idx) => usados.has(idx)).map(kS));
         solus.forEach((r, idx) => {
             if (usados.has(idx)) return;
             const base = { nf: r.nf, fornecedor: r.prestador, cnpj: r.cnpj, divergencias: [], prestadorSolus: r.prestador, vencimento: r.vencimento, valor: r.valor };
-            if (chavesCasadas.has(k(r.cnpj, r.nf))) {
+            if (chavesCasadas.has(kS(r))) {
                 resultado.push(Object.assign(base, { arquivo: '(lançamento repetido no Solus)', status: 'DUPLICADO_SOLUS', divergencias: [`NF ${r.nf} lançada mais de uma vez no Solus (linha ${r.linhaOrigem || '?'} do relatório)`] }));
                 return;
             }
             if (!indiceGeral) montarIndice();
-            const arqs = indiceGeral[k(r.cnpj, r.nf)];
+            let arqs = r.cnpj ? indiceGeral[k(r.cnpj, r.nf)] : null;
+            if (!r.cnpj) { arqs = Object.keys(db).filter(n => !db[n].apagado && (() => { const i = infoDoItem(n); return i.nf && nfCompativel(r, i) && eqValor(r, i); })()); if (!arqs.length) arqs = null; } // PDF: NF truncada se repete — exige o mesmo valor
             if (arqs && arqs.length) {
                 const it = db[arqs[0]];
                 resultado.push(Object.assign(base, { arquivo: arqs[0], status: it.a === 'CONCILIADO' ? 'CONCILIADO_OUTRA_DATA' : 'LANCADO_SEM_MOVER', resp: it.resp || '-',
                     divergencias: [it.a === 'CONCILIADO' ? `Arquivo foi para Lançados em ${it.d} (outra data)` : 'Já lançado no Solus, mas o arquivo ainda não foi movido para Lançados'] }));
             } else {
                 if (r.cnpj && !validarDocumento(r.cnpj)) base.divergencias.push(`CNPJ/CPF do Solus (${r.cnpj}) com dígito verificador inválido`);
+                divergenciasInternasSolus(r).forEach(x => base.divergencias.push(x));
                 resultado.push(Object.assign(base, { arquivo: '(sem PDF correspondente)', status: 'SEM_ARQUIVO' }));
             }
         });
@@ -4639,6 +4832,11 @@
         let avisos = `<tr><td colspan="5" style="padding:8px 12px; background:#F7FBF9;">${resumo}</td></tr>`;
         if (!conexoes["SOLUS"] && !solusFonteRemota) avisos += `<tr><td colspan="5" style="text-align:center; padding:8px; color:#F47920; font-size:0.75rem; font-weight:700;">⏳ Relatório Solus da data não encontrado (pasta não conectada e sem retrato na planilha) — itens lançados aparecem como "Aguardando relatório".</td></tr>`;
         else if (solusFonteRemota) avisos += `<tr><td colspan="5" style="text-align:center; padding:8px; color:#8a6d00; font-size:0.75rem; font-style:italic;">📡 Dados do Solus sincronizados da planilha (pasta Solus não conectada nesta máquina)</td></tr>`;
+        const rels = (!solusFonteRemota && _solusCache && _solusCache.relatorios) || [];
+        if (rels.length) {
+            const dif = rels.length > 1 && rels.some(r => r.qtd !== rels[0].qtd);
+            avisos += `<tr><td colspan="5" style="padding:8px 12px; font-size:0.75rem; ${dif ? 'background:#FFF4E5; color:#9A4300; font-weight:700;' : 'color:#5B5C65;'}">${dif ? '⚠️ Relatórios do mesmo dia com quantidades diferentes — conferindo pela união: ' : '📄 Relatório lido: '}${rels.map(r => `${esc(r.nome)} (${r.qtd} lançamentos)`).join(' × ')}${dif ? '. O relatório menor provavelmente foi tirado antes do fim do dia.' : ''}${(solusRegistrosAtual || []).some(r => r.fontePdf) ? ' · <span style="font-weight:400;">Relatório sem CNPJ: conferência feita por NF + valor + fornecedor.</span>' : ''}</td></tr>`;
+        }
 
         const fmt = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         corpo.innerHTML = avisos + _auditoriaSolusAtual.map(item => {
@@ -5122,6 +5320,9 @@
                   }
                 }
                 try { if (await organizarDevolvidos(devolvidosMap)) houveMudanca = true; } catch (eOrg) { console.warn('Organização de _DEVOLVIDOS:', eOrg); }
+            } else if (conexoes["ORIGEM"] || conexoes["DEVOLVIDOS"]) {
+                // Mesmo olhando uma data passada, o sentinela continua arquivando o que já foi resolvido em _DEVOLVIDOS
+                try { const mDev = await lerDevolvidosOrigem(conexoes["ORIGEM"]); if (mDev && await organizarDevolvidos(mDev)) houveMudanca = true; } catch (eOrg) { console.warn('Organização de _DEVOLVIDOS:', eOrg); }
             }
 
             if (houveMudanca) {
