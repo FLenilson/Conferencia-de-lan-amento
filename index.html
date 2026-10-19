@@ -9,7 +9,7 @@
     <style>
         :root {
             --primary: #00995D; --primary-dark: #0A5F55; --primary-light: #B1D34B; --unimed-amarelo: #FFCB08; --unimed-laranja: #F47920; --unimed-roxo: #411564; --unimed-cinza: #5B5C65; --secondary: #5B5C65; --bg: #F2F7F4; --white: #ffffff;
-            --prod-color: #01579b; --prod-bg: #e3f2fd;
+            --prod-color: #01579b; --prod-bg: #E6F4EE;
             --serv-color: #00995D; --serv-bg: #E6F4EE;
             --juri-color: #4527a0; --juri-bg: #E6F4EE;
             --assi-color: #F47920; --assi-bg: #fff3e0;
@@ -21,7 +21,7 @@
             --solus-erro-bg: #ffebee; --solus-erro-text: #c62828;
         }
 
-        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #E6F4EE 0%, #F4F8EA 55%, #EEF5F2 100%); background-attachment: fixed; min-height: 100vh; margin: 0; color: #2c3e50; padding-bottom: 40px; overflow-x: hidden; }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #E6F4EE 0%, #F4F8EA 55%, #EEF5F2 100%); background-attachment: fixed; min-height: 100vh; margin: 0; color: #1F2933; padding-bottom: 40px; overflow-x: hidden; }
         .nav { background: var(--white); padding: 10px 20px; border-bottom: 4px solid var(--primary); box-shadow: 0 2px 8px rgba(0,153,93,0.10); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; position: sticky; top: 0; z-index: 1000; }
         .brand { font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 1rem; color: var(--primary); text-transform: uppercase; flex-shrink: 0; white-space: nowrap; }
         .widgets-top { display: flex; flex-wrap: wrap; gap: 10px 15px; flex-grow: 1; justify-content: center; font-size: 0.65rem; font-weight: 700; color: #64748b; min-width: 0; }
@@ -29,11 +29,11 @@
         .widget-item span { color: var(--primary); }
         .tipo-badge { border-right: none !important; padding: 4px 10px !important; border-radius: 14px; font-weight: 700; font-size: 0.72rem; }
         .tipo-badge span { color: #fff !important; font-weight: 800; }
-        .status-pill { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; font-weight: 700; color: #7f8c8d; padding: 3px 10px; border-radius: 20px; background: #f1f3f5; min-width: 100px; justify-content: center; flex-shrink: 0; white-space: nowrap; }
+        .status-pill { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; font-weight: 700; color: #5B5C65; padding: 3px 10px; border-radius: 20px; background: #f1f3f5; min-width: 100px; justify-content: center; flex-shrink: 0; white-space: nowrap; }
 
         .dot { width: 6px; height: 6px; border-radius: 50%; background: #ced4da; transition: 0.3s; }
         .dot-active { background: #00995D; animation: pulse 1.5s infinite; }
-        .dot-warning { background: #ff9800; animation: pulse-warn 1.5s infinite; }
+        .dot-warning { background: #F47920; animation: pulse-warn 1.5s infinite; }
         .dot-error { background: #f44336; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); } 100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); } }
         @keyframes pulse-warn { 0% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(255, 152, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0); } }
@@ -42,7 +42,7 @@
         .container { padding: 12px 30px; max-width: 1400px; margin: auto; }
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 210px)); gap: 8px; margin-bottom: 6px; align-items: stretch; justify-content: start; }
         .card { background: var(--white); padding: 7px 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); border-top: 3px solid var(--primary); text-align: center; }
-        .card-label { font-size: 0.6rem; font-weight: 700; color: #7f8c8d; text-transform: uppercase; }
+        .card-label { font-size: 0.6rem; font-weight: 700; color: #5B5C65; text-transform: uppercase; }
         .card-val { font-family: 'Poppins', sans-serif; font-size: 1.4rem; font-weight: 800; }
 
         .equipe-stats { display: flex; gap: 6px; justify-content: center; margin-bottom: 6px; flex-wrap: wrap; }
@@ -52,7 +52,7 @@
         .caixa-filtro-ativa { outline: 2px solid #0A5F55; outline-offset: 1px; background: #E6F4EE !important; }
         .card.caixa-filtro-ativa { border-top-color: #0A5F55; }
         .widget-item.caixa-filtro-ativa { color: #0A5F55; border-radius: 6px; }
-        .tipo-badge.caixa-filtro-ativa { background: var(--cor-badge) !important; outline: 3px solid #2c3e50 !important; outline-offset: 1px; filter: brightness(0.85); color: #fff !important; }
+        .tipo-badge.caixa-filtro-ativa { background: var(--cor-badge) !important; outline: 3px solid #1F2933 !important; outline-offset: 1px; filter: brightness(0.85); color: #fff !important; }
         .tipo-badge.caixa-filtro-ativa span { color: #fff !important; }
         .equipe-card span { font-family: 'Poppins', sans-serif; font-size: 0.95rem; color: #0A5F55; }
 
@@ -68,7 +68,7 @@
 
         .btn-conn { padding: 5px 12px; border-radius: 16px; font-weight: 700; font-size: 0.68rem; cursor: pointer; border: 1px solid #cbd5e1; background: #f1f5f9; color: #64748b; transition: 0.3s; }
         .btn-conn:hover { background: #e2e8f0; }
-        .conn-origem.connected { background: #e3f2fd; color: #1565c0; border-color: #90caf9; }
+        .conn-origem.connected { background: #E6F4EE; color: #0A5F55; border-color: #90caf9; }
         .conn-colab.connected { background: #E6F4EE; color: #0A5F55; border-color: #9ED3B9; }
         .conn-final.connected { background: #E6F4EE; color: #0A5F55; border-color: #9ED3B9; }
         .conn-solus.connected { background: #EFE9F5; color: #411564; border-color: #B9A6D1; }
@@ -101,11 +101,11 @@
         .badge { padding: 4px 8px; border-radius: 15px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; display: inline-flex; align-items: center; gap: 4px; width: 100%; max-width: 130px; justify-content: center; box-sizing: border-box; text-align: center;}
 
         .st-ok { background: var(--success-bg); color: var(--success-text); }
-        .st-transito { background: #e3f2fd; color: #1565c0; }
+        .st-transito { background: #E6F4EE; color: #0A5F55; }
         .st-na-pasta { background: var(--pending-bg); color: var(--pending-text); }
         .st-direto { background: #eceff1; color: #37474f; font-style: italic; }
         .st-manoel { background: #E6F4EE; color: #0A5F55; border: 1px solid #B7DFCB; }
-        .st-recortado { background: #ffe0d1; color: #d84315; border: 1px solid #ffccbc; }
+        .st-recortado { background: #ffe0d1; color: #B4500F; border: 1px solid #ffccbc; }
         .st-colab { background: #E6F4EE; color: #0A5F55; border: 1px solid #B7DFCB; }
         .st-solus-ok { background: var(--success-bg); color: var(--success-text); }
         .st-solus-alerta { background: var(--solus-alerta-bg); color: var(--solus-alerta-text); border: 1px solid #ffe082; }
@@ -113,12 +113,12 @@
         .st-solus-sem-arquivo { background: #eceff1; color: #37474f; border: 1px dashed #b0bec5; }
 
         .btn-ciencia { background: #ff5252; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.55rem; font-weight: 900; cursor: pointer; text-transform: uppercase; margin-top: 4px; transition: 0.2s;}
-        .btn-ciencia:hover { background: #d32f2f; }
+        .btn-ciencia:hover { background: #C62828; }
 
-        .chk-item, #checkAll { width: 16px; height: 16px; cursor: pointer; accent-color: #ef4444; margin-top: 5px; }
+        .chk-item, #checkAll { width: 16px; height: 16px; cursor: pointer; accent-color: #C62828; margin-top: 5px; }
 
         .sla-box { font-size: 0.7rem; font-weight: 700; color: #0A5F55; display:flex; align-items:center; gap:4px; }
-        .sla-idle { color: #d84315; }
+        .sla-idle { color: #B4500F; }
 
         .divergencia-item { font-size: 0.68rem; color: #c62828; display: block; margin-top: 2px; }
 
@@ -172,14 +172,50 @@
         @media (max-width: 900px) {
             .dashboard-panel { grid-template-columns: 1fr; }
         }
+
+        /* ===== Login / usuários (padrão Unimed) ===== */
+        .tela-login { position:fixed; inset:0; z-index:20000; display:flex; align-items:center; justify-content:center; padding:16px; background:linear-gradient(150deg,#00995D 0%,#0A5F55 100%); }
+        .tela-login.modal-senha { background:rgba(10,95,85,.55); }
+        .login-card { background:#fff; width:min(380px,100%); border-radius:16px; padding:24px 24px 18px; box-shadow:0 18px 50px rgba(0,0,0,.25); display:flex; flex-direction:column; gap:6px; border-top:6px solid #B1D34B; }
+        .login-topo { display:flex; justify-content:center; margin-bottom:4px; }
+        .login-titulo { font-family:Poppins,sans-serif; font-weight:800; color:#0A5F55; font-size:1.25rem; text-align:center; }
+        .login-sub { text-align:center; color:#5B5C65; font-size:.8rem; margin-bottom:8px; }
+        .login-card label { font-size:.75rem; font-weight:700; color:#0A5F55; margin-top:4px; }
+        .login-card input:not([type=checkbox]) { width:100%; box-sizing:border-box; padding:10px 12px; border:1.5px solid #B7DFCB; border-radius:8px; font-size:.95rem; }
+        .login-card input:focus { outline:none; border-color:#00995D; box-shadow:0 0 0 3px rgba(0,153,93,.15); }
+        .login-senha { display:flex; gap:6px; } .login-senha button { border:1.5px solid #B7DFCB; background:#fff; border-radius:8px; padding:0 10px; cursor:pointer; }
+        .login-manter { display:flex !important; align-items:center; gap:6px; font-weight:600 !important; color:#5B5C65 !important; }
+        .login-btn { margin-top:10px; background:#00995D; color:#fff; border:none; border-radius:24px; padding:11px; font-weight:800; font-size:.95rem; cursor:pointer; }
+        .login-btn:hover { background:#0A5F55; } .login-btn:disabled { opacity:.6; cursor:wait; }
+        .login-btn-sec { background:#fff; color:#0A5F55; border:1.5px solid #0A5F55; margin-top:4px; }
+        .login-msg { color:#C62828; font-size:.8rem; font-weight:700; min-height:1em; }
+        .login-aviso { background:#FFF6D6; border-left:4px solid #FFCB08; color:#5B5C65; font-size:.78rem; padding:8px 10px; border-radius:0 8px 8px 0; }
+        .login-rodape { text-align:center; font-size:.72rem; color:#5B5C65; margin-top:10px; line-height:1.5; } .login-rodape a { color:#00995D; }
+        .login-card input[type=checkbox], .mu-caixa input[type=checkbox] { accent-color:#00995D; }
+        .usuario-chip { display:flex; align-items:center; gap:6px; cursor:pointer; background:#E6F4EE; color:#0A5F55; border:1px solid #9ED3B9; border-radius:20px; padding:4px 12px; font-size:.75rem; font-weight:700; white-space:nowrap; margin-right:8px; }
+        .usuario-chip small { background:#00995D; color:#fff; border-radius:10px; padding:1px 7px; font-size:.6rem; letter-spacing:.3px; }
+        .menu-usuario { position:fixed; z-index:15000; background:#fff; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.18); min-width:230px; overflow:hidden; border-top:4px solid #00995D; }
+        .menu-usuario .mu-cab { padding:10px 14px; font-size:.8rem; color:#0A5F55; border-bottom:1px solid #E6F4EE; } .menu-usuario .mu-cab span { color:#5B5C65; font-size:.72rem; }
+        .menu-usuario button { display:block; width:100%; text-align:left; background:none; border:none; padding:10px 14px; font-size:.82rem; cursor:pointer; color:#1F2933; } .menu-usuario button:hover { background:#E6F4EE; }
+        .modal-usuarios { position:fixed; inset:0; z-index:15000; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; padding:16px; }
+        .mu-caixa { background:#fff; border-radius:14px; width:min(1150px,100%); max-height:90vh; overflow:auto; border-top:6px solid #00995D; padding:16px 18px; }
+        .mu-titulo { font-family:Poppins,sans-serif; font-weight:800; color:#0A5F55; font-size:1.1rem; margin-bottom:8px; }
+        .mu-dica { font-size:.72rem; color:#5B5C65; background:#F7FBF9; border-left:3px solid #9ED3B9; padding:6px 10px; margin:6px 0 10px; }
+        .mu-tab { width:100%; min-width:0; table-layout:auto; font-size:.78rem; } .mu-tab th { background:#00995D; color:#fff; padding:6px; text-align:left; } .mu-tab td { padding:6px; border-bottom:1px solid #E2E8F0; vertical-align:top; }
+        .mu-tab input.mu-nome, .mu-novo input, .mu-novo select, .mu-tab select { padding:5px 7px; border:1px solid #B7DFCB; border-radius:6px; font-size:.78rem; }
+        .mu-perms { display:flex; flex-wrap:wrap; gap:4px 10px; max-width:420px; } .mu-perm { font-size:.7rem; white-space:nowrap; }
+        .mu-acoes { white-space:nowrap; } .mu-acoes .btn { padding:4px 8px; font-size:.72rem; margin:1px; } .mu-acoes .btn:not(.btn-outline) { background:#00995D; color:#fff; border:none; }
+        .mu-novo { margin-top:12px; padding:10px; border:1px dashed #9ED3B9; border-radius:10px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; } .mu-novo .btn { background:#00995D; color:#fff; border:none; }
+        body.sem-ciencia .btn-ciencia, body.sem-ciencia [onclick^="atribuirResponsavelManual("], body.sem-excluir .chk-item, body.sem-excluir #checkAll { display:none !important; }
+        @media print { .usuario-chip, .menu-usuario, .tela-login, .modal-usuarios { display:none !important; } }
     </style>
 </head>
-<body onload="iniciar()">
+<body onload="iniciarComLogin()">
     <div id="banner-desconexao" style="display:none; position:sticky; top:0; z-index:4000; background:#c62828; color:white; padding:12px 20px; text-align:center; font-weight:800; font-size:0.9rem; box-shadow:0 2px 8px rgba(0,0,0,0.3);">
         ⚠️ <span id="banner-desconexao-texto">Uma pasta perdeu a conexão</span> — os lançamentos NÃO estão sendo atualizados até reconectar.
         <button onclick="document.getElementById('banner-desconexao').style.display='none'; toggleConexoes(true);" style="margin-left:12px; background:white; color:#c62828; border:none; padding:6px 14px; border-radius:6px; font-weight:800; cursor:pointer;">Reconectar agora</button>
     </div>
-    <div id="banner-data-antiga" style="display:none; position:sticky; top:0; z-index:3900; background:#f9a825; color:#212121; padding:12px 20px; text-align:center; font-weight:800; font-size:0.9rem; box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+    <div id="banner-data-antiga" style="display:none; position:sticky; top:0; z-index:3900; background:#FFCB08; color:#212121; padding:12px 20px; text-align:center; font-weight:800; font-size:0.9rem; box-shadow:0 2px 8px rgba(0,0,0,0.3);">
         📅 A data selecionada (<span id="banner-data-antiga-data"></span>) não é hoje — a varredura ao vivo das pastas está <u>pausada</u> (só mostra o que já foi salvo).
         <button onclick="voltarParaHoje()" style="margin-left:12px; background:#212121; color:white; border:none; padding:6px 14px; border-radius:6px; font-weight:800; cursor:pointer;">Voltar pra hoje</button>
     </div>
@@ -189,11 +225,11 @@
 <nav class="nav">
     <div class="brand">Monitor de Lançamentos</div>
     <div class="widgets-top">
-        <div class="widget-item caixa-filtro tipo-badge" id="w-item-prod" onclick="aplicarFiltroCaixa('tipo','PRODUTO')" title="Filtrar por Produtos" style="background:#3498db; color:#fff; --cor-badge:#3498db;">PRODUTOS: <span id="w-prod">0</span></div>
-        <div class="widget-item caixa-filtro tipo-badge" id="w-item-serv" onclick="aplicarFiltroCaixa('tipo','SERVIÇO')" title="Filtrar por Serviços" style="background:#1abc9c; color:#fff; --cor-badge:#1abc9c;">SERVIÇOS: <span id="w-serv">0</span></div>
-        <div class="widget-item caixa-filtro tipo-badge" id="w-item-juri" onclick="aplicarFiltroCaixa('tipo','JURIDICO')" title="Filtrar por Jurídico" style="background:#9b59b6; color:#fff; --cor-badge:#9b59b6;">JURÍDICO: <span id="w-juri">0</span></div>
-        <div class="widget-item caixa-filtro tipo-badge" id="w-item-assi" onclick="aplicarFiltroCaixa('tipo','ASSISTENCIAL')" title="Filtrar por Assistencial" style="background:#e74c3c; color:#fff; --cor-badge:#e74c3c;">ASSISTENCIAL: <span id="w-assi">0</span></div>
-        <div class="widget-item caixa-filtro tipo-badge" id="w-item-outr" onclick="aplicarFiltroCaixa('tipo','OUTRO')" title="Filtrar por Outros" style="background:#7f8c8d; color:#fff; --cor-badge:#7f8c8d;">OUTROS: <span id="w-outr">0</span></div>
+        <div class="widget-item caixa-filtro tipo-badge" id="w-item-prod" onclick="aplicarFiltroCaixa('tipo','PRODUTO')" title="Filtrar por Produtos" style="background:#0A5F55; color:#fff; --cor-badge:#0A5F55;">PRODUTOS: <span id="w-prod">0</span></div>
+        <div class="widget-item caixa-filtro tipo-badge" id="w-item-serv" onclick="aplicarFiltroCaixa('tipo','SERVIÇO')" title="Filtrar por Serviços" style="background:#00995D; color:#fff; --cor-badge:#00995D;">SERVIÇOS: <span id="w-serv">0</span></div>
+        <div class="widget-item caixa-filtro tipo-badge" id="w-item-juri" onclick="aplicarFiltroCaixa('tipo','JURIDICO')" title="Filtrar por Jurídico" style="background:#411564; color:#fff; --cor-badge:#411564;">JURÍDICO: <span id="w-juri">0</span></div>
+        <div class="widget-item caixa-filtro tipo-badge" id="w-item-assi" onclick="aplicarFiltroCaixa('tipo','ASSISTENCIAL')" title="Filtrar por Assistencial" style="background:#F47920; color:#fff; --cor-badge:#F47920;">ASSISTENCIAL: <span id="w-assi">0</span></div>
+        <div class="widget-item caixa-filtro tipo-badge" id="w-item-outr" onclick="aplicarFiltroCaixa('tipo','OUTRO')" title="Filtrar por Outros" style="background:#5B5C65; color:#fff; --cor-badge:#5B5C65;">OUTROS: <span id="w-outr">0</span></div>
         <div style="color: #94a3b8">Ref: <span id="w-time">--:--:--</span></div>
         <div id="sp-status-indicator" onclick="abrirConfigPlanilha()" title="Clique para configurar a planilha Google" style="font-size: 0.78rem; font-weight: 700; margin-top: 4px; cursor:pointer;">⚪ Fora do SharePoint (salvando só localmente)</div>
     </div>
@@ -209,11 +245,11 @@
         <div class="card caixa-filtro" id="card-pend" onclick="aplicarFiltroCaixa('status','ABERTO')" title="Clique para filtrar só os itens em aberto"><div class="card-label">Em Aberto</div><div id="v-pend" class="card-val">0</div></div>
         <div class="card caixa-filtro" id="card-ok" onclick="aplicarFiltroCaixa('status','CONCILIADO')" title="Clique para filtrar só os itens conciliados"><div class="card-label">Conciliados</div><div id="v-ok" class="card-val">0</div></div>
         <div class="card"><div class="card-label">Eficiência</div><div id="v-perc" class="card-val">0%</div></div>
-        <div class="card" id="card-asten" style="cursor:pointer; border: 1px solid #f9a825;" onclick="mostrarAba('asten')" title="Clique para ver, numa aba separada, quais itens do relatório Asten ainda não foram baixados">
+        <div class="card" id="card-asten" style="cursor:pointer; border: 1px solid #FFCB08;" onclick="mostrarAba('asten')" title="Clique para ver, numa aba separada, quais itens do relatório Asten ainda não foram baixados">
             <div class="card-label">Asten: Baixados / Pendentes</div>
             <div class="card-val" style="font-size:1.3rem;"><span id="v-asten-baixados">0</span> / <span id="v-asten-pendentes" style="color:#c62828;">0</span></div>
         </div>
-        <button id="btn-limpar-filtro-caixa" class="btn btn-outline" style="display:none; color:#ef4444; border-color:#ef4444; align-self:center;" onclick="limparFiltrosCaixa()">✕ Limpar Filtro</button>
+        <button id="btn-limpar-filtro-caixa" class="btn btn-outline" style="display:none; color:#C62828; border-color:#C62828; align-self:center;" onclick="limparFiltrosCaixa()">✕ Limpar Filtro</button>
     </div>
 
     <!-- PLACAR DE PRODUTIVIDADE (compacto, ao lado dos cards acima na versão desktop) -->
@@ -226,7 +262,7 @@
 	<div class="equipe-card caixa-filtro" id="equipe-card-ANANDA" onclick="aplicarFiltroCaixa('resp','ANANDA')" title="Filtrar por Ananda">Ananda <span id="qtd-ANANDA">0</span></div>
 	<div class="equipe-card caixa-filtro" id="equipe-card-MANOEL" onclick="aplicarFiltroCaixa('resp','MANOEL')" title="Filtrar por Manoel">Manoel <span id="qtd-MANOEL">0</span></div>
 	<div class="equipe-card caixa-filtro" id="card-sem-resp" onclick="aplicarFiltroCaixa('resp','-')" title="Clique para ver e corrigir os itens sem responsável identificado" style="display:none; border-color:#c62828; background:#fdecea; color:#c62828;">⚠ Sem Responsável <span id="qtd-SEM-RESP">0</span></div>
-	<div class="equipe-card caixa-filtro" id="card-erro-leitura" onclick="aplicarFiltroCaixa('erro','1')" title="Clique para ver os itens em que a leitura automática falhou (registrados mesmo assim)" style="display:none; border-color:#f9a825; background:#fff8e1; color:#8d6e00;">🛠 Erro de Leitura <span id="qtd-ERRO-LEITURA">0</span></div>
+	<div class="equipe-card caixa-filtro" id="card-erro-leitura" onclick="aplicarFiltroCaixa('erro','1')" title="Clique para ver os itens em que a leitura automática falhou (registrados mesmo assim)" style="display:none; border-color:#FFCB08; background:#fff8e1; color:#8d6e00;">🛠 Erro de Leitura <span id="qtd-ERRO-LEITURA">0</span></div>
 	<div class="equipe-card caixa-filtro" id="card-devolvidos" onclick="aplicarFiltroCaixa('devol','1')" title="Documentos que a colaboradora devolveu para a Origem por divergência na conferência" style="display:none; border-color:#F47920; background:#FFF3E8; color:#B4500F;">↩️ Devolvidos à Origem <span id="qtd-DEVOLVIDOS">0</span></div>
 
     </div>
@@ -248,7 +284,7 @@
             <div class="toolbar-divisor"></div>
 
             <div class="toolbar-zona-risco" title="Ações que alteram vários itens de uma vez — use com atenção">
-                <button class="btn btn-outline" style="color:#d32f2f; border-color:#d32f2f;" onclick="darCienciaEmTudo()">✓ Ciência em Tudo</button>
+                <button class="btn btn-outline" style="color:#C62828; border-color:#C62828;" onclick="darCienciaEmTudo()">✓ Ciência em Tudo</button>
                 <button class="btn btn-outline" style="color:#F47920; border-color:#F47920;" onclick="excluirSelecionados()">🗑️ Excluir Selecionados</button>
             </div>
 
@@ -272,7 +308,7 @@
                 <button id="btn-conn-ORIGEM" class="btn-conn conn-origem" onclick="conectarPasta('ORIGEM')">📥 Origem</button>
                 <button class="btn-conn" style="background:#E6F4EE; border-color:#00995D; color:#0A5F55; font-weight:800;" onclick="abrirConfigPlanilha()" title="Endereço do Apps Script e token da planilha Google">📗 Planilha Google</button>
                 <button id="btn-conn-DEVOLVIDOS" class="btn-conn" style="background:#FFF3E8; border-color:#F47920; color:#B4500F;" onclick="conectarPasta('DEVOLVIDOS')" title="Conecte a pasta onde as colaboradoras colocam os documentos devolvidos (ex.: _DEVOLVIDOS). Pode ficar em qualquer lugar da rede.">↩️ Devolvidos</button><button class="btn-conn" style="background:#fff; border-color:#F47920; color:#B4500F;" onclick="criarPastasDevolucao()" title="Cria _SUBSTITUIDOS e _CANCELADOS dentro da pasta de devolvidos e autoriza este computador a mover os PDFs antigos">📁 Preparar Devolvidos</button>
-                <button id="btn-conn-ASTEN" class="btn-conn" style="background:#fff8e1; border-color:#f9a825; color:#8d6e00;" onclick="conectarPasta('ASTEN')" title="Pasta onde ficam os relatórios Excel da Asten, salvos por dia">📊 Relatório Asten</button>
+                <button id="btn-conn-ASTEN" class="btn-conn" style="background:#fff8e1; border-color:#FFCB08; color:#8d6e00;" onclick="conectarPasta('ASTEN')" title="Pasta onde ficam os relatórios Excel da Asten, salvos por dia">📊 Relatório Asten</button>
 
                 <div class="divisor-v"></div>
 
@@ -543,12 +579,12 @@
             }).join('');
             corpo = `<table style="width:100%; border-collapse:collapse; font-size:0.78rem;">
                 <thead><tr>
-                    <th style="text-align:left; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#7f8c8d; font-size:0.68rem; text-transform:uppercase;">Etapa</th>
-                    <th style="text-align:left; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#7f8c8d; font-size:0.68rem; text-transform:uppercase;">Responsável</th>
-                    <th style="text-align:left; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#7f8c8d; font-size:0.68rem; text-transform:uppercase;">Situação</th>
-                    <th style="text-align:left; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#7f8c8d; font-size:0.68rem; text-transform:uppercase;">Entrou</th>
-                    <th style="text-align:left; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#7f8c8d; font-size:0.68rem; text-transform:uppercase;">Saiu</th>
-                    <th style="text-align:left; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#7f8c8d; font-size:0.68rem; text-transform:uppercase;">Tempo</th>
+                    <th style="text-align:left; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#5B5C65; font-size:0.68rem; text-transform:uppercase;">Etapa</th>
+                    <th style="text-align:left; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#5B5C65; font-size:0.68rem; text-transform:uppercase;">Responsável</th>
+                    <th style="text-align:left; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#5B5C65; font-size:0.68rem; text-transform:uppercase;">Situação</th>
+                    <th style="text-align:left; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#5B5C65; font-size:0.68rem; text-transform:uppercase;">Entrou</th>
+                    <th style="text-align:left; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#5B5C65; font-size:0.68rem; text-transform:uppercase;">Saiu</th>
+                    <th style="text-align:left; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#5B5C65; font-size:0.68rem; text-transform:uppercase;">Tempo</th>
                 </tr></thead>
                 <tbody>${linhas}</tbody>
             </table>`;
@@ -560,7 +596,7 @@
         modal.innerHTML = `
             <div style="background:white; border-radius:10px; padding:20px; max-width:640px; width:100%; max-height:80vh; overflow:auto; box-shadow:0 8px 30px rgba(0,0,0,0.3);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                    <h3 style="margin:0; font-size:1rem; color:#2c3e50;">🕐 Linha do tempo</h3>
+                    <h3 style="margin:0; font-size:1rem; color:#1F2933;">🕐 Linha do tempo</h3>
                     <button onclick="fecharModalHistorico()" style="border:none; background:none; font-size:1.3rem; cursor:pointer; color:#c62828; line-height:1;">✕</button>
                 </div>
                 <div style="font-size:0.72rem; color:#94a3b8; margin-bottom:14px; word-break:break-all;">${esc(nomeArquivo)}</div>
@@ -708,6 +744,9 @@
         try { await carregarDadosRemotosPorData(getDataSelecionada()); } catch (e) {}
         atualizarTela();
         carregarDevolucoesRemotas(180); atualizarSemPastas(); processarFilaSincronizacao();
+        // Planilha recém-configurada: agora dá para entrar com usuário e senha
+        if (!AUTH) { document.querySelectorAll('.tela-login').forEach(e => e.remove()); mostrarLogin(() => location.reload()); }
+        else document.querySelectorAll('.tela-login').forEach(e => e.style.display = '');
     }
     function removerConfigPlanilha() {
         if (!confirm('Remover a configuração da planilha deste navegador?')) return;
@@ -1064,7 +1103,7 @@
         spStatus = status;
         const el = document.getElementById('sp-status-indicator');
         if (!el) return;
-        const cores = { ok: '#0A5F55', erro: '#c62828', offline: '#78909c', aguardando: '#f9a825' };
+        const cores = { ok: '#0A5F55', erro: '#c62828', offline: '#78909c', aguardando: '#FFCB08' };
         const textos = { ok: '🟢 Sincronizado', erro: '🔴 Erro ao sincronizar', offline: '⚪ Planilha não configurada — clique aqui para conectar', aguardando: '🟡 Sincronizando...' };
         el.style.color = cores[status] || '#78909c';
         el.title = msg || textos[status] || '';
@@ -1425,6 +1464,7 @@
     // mas o caminho da pasta sim, então normalmente basta 1 clique em "Reconectar"
     // (sem precisar navegar pelas pastas do Windows de novo).
     async function restaurarConexoesSalvas() {
+        if (loginObrigatorio() && !pode('pastas')) return; // usuário sem liberação de pastas: este computador só consulta
         const handles = await handleEngine.loadAll();
         let algumaAutoReconectada = false;
 
@@ -1526,7 +1566,7 @@
     }
 
     async function atualizarSemPastas() {
-        if (Object.values(conexoes).some(h => h !== null)) return; // com pastas conectadas o processar() já cobre
+        if (Object.values(conexoes).some(h => h !== null) && pode('pastas')) return; // com pastas conectadas o processar() já cobre
         if (!GS_CONFIG.ativo || !GS_CONFIG.webAppUrl) return;
         try {
             const iso = document.getElementById('data-historico').value || getHojeISO();
@@ -2672,9 +2712,9 @@
     }
 
     function gerarHtmlDashboardCompleto(s) {
-        const corStatus = { CONCILIADO: '#00995D', 'EM ANDAMENTO': '#ff9800', AGUARDANDO: '#9e9e9e', OUTRO: '#607d8b' };
-        const corTipo = { PRODUTO: '#3498db', 'SERVIÇO': '#1abc9c', JURIDICO: '#9b59b6', ASSISTENCIAL: '#e74c3c', OUTRO: '#95a5a6' };
-        const coresColab = ['#9b59b6', '#3498db', '#1abc9c', '#e67e22', '#e91e63', '#2ecc71', '#7f8c8d'];
+        const corStatus = { CONCILIADO: '#00995D', 'EM ANDAMENTO': '#F47920', AGUARDANDO: '#9e9e9e', OUTRO: '#607d8b' };
+        const corTipo = { PRODUTO: '#0A5F55', 'SERVIÇO': '#00995D', JURIDICO: '#411564', ASSISTENCIAL: '#F47920', OUTRO: '#95a5a6' };
+        const coresColab = ['#411564', '#0A5F55', '#00995D', '#F47920', '#e91e63', '#2ecc71', '#5B5C65'];
 
         const tabelaGargalos = s.gargalos.length ? s.gargalos.map(g => `
             <tr>
@@ -2685,7 +2725,7 @@
 
         const solusBloco = s.solus ? `
             <div class="kpi-card"><div class="kpi-label">Solus: Conciliados (dia ref.)</div><div class="kpi-val" style="color:#00995D;">${s.solus.conciliado}</div></div>
-            <div class="kpi-card"><div class="kpi-label">Solus: Com Alerta (dia ref.)</div><div class="kpi-val" style="color:#f9a825;">${s.solus.comAlerta}</div></div>
+            <div class="kpi-card"><div class="kpi-label">Solus: Com Alerta (dia ref.)</div><div class="kpi-val" style="color:#8a6d00;">${s.solus.comAlerta}</div></div>
             <div class="kpi-card"><div class="kpi-label">Solus: Não Lançado (dia ref.)</div><div class="kpi-val" style="color:#c62828;">${s.solus.naoLancado}</div></div>
             <div class="kpi-card"><div class="kpi-label">Solus: Sem Arquivo (dia ref.)</div><div class="kpi-val" style="color:#8d6e00;">${s.solus.semArquivo}</div></div>` : '';
 
@@ -2698,39 +2738,39 @@
 <style>
     :root { --primary: #00995D; }
     * { box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 24px; color: #2c3e50; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 24px; color: #1F2933; }
     h1 { color: var(--primary); margin: 0 0 4px 0; font-size: 1.5rem; }
-    .subtitulo { color: #7f8c8d; font-size: 0.85rem; margin-bottom: 16px; }
-    h2 { font-size: 1.05rem; color: #34495e; border-left: 4px solid var(--primary); padding-left: 10px; margin: 32px 0 14px 0; }
+    .subtitulo { color: #5B5C65; font-size: 0.85rem; margin-bottom: 16px; }
+    h2 { font-size: 1.05rem; color: #5B5C65; border-left: 4px solid var(--primary); padding-left: 10px; margin: 32px 0 14px 0; }
     .filtro-periodo { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; background: white; padding: 14px 16px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); margin-bottom: 20px; border-left: 4px solid #0A5F55; position: relative; }
-    .filtro-periodo label { font-size: 0.7rem; font-weight: 700; color: #7f8c8d; text-transform: uppercase; margin-right: 4px; }
+    .filtro-periodo label { font-size: 0.7rem; font-weight: 700; color: #5B5C65; text-transform: uppercase; margin-right: 4px; }
     .filtro-periodo button.btn-limpar { padding: 7px 14px; border-radius: 6px; border: 1px solid #0A5F55; color: #0A5F55; background: white; font-weight: 700; cursor: pointer; font-size: 0.8rem; }
     .filtro-periodo button.btn-limpar:hover { background: #E6F4EE; }
     .filtro-badge { font-size: 0.75rem; color: #0A5F55; font-weight: 700; margin-left: auto; }
     .multiselect { position: relative; display: inline-block; }
-    .multiselect-btn { padding: 7px 12px; border-radius: 6px; border: 1px solid #dcdfe4; font-size: 0.82rem; font-weight: 600; color: #2c3e50; background: #f8f9fa; cursor: pointer; min-width: 110px; text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .multiselect-btn { padding: 7px 12px; border-radius: 6px; border: 1px solid #dcdfe4; font-size: 0.82rem; font-weight: 600; color: #1F2933; background: #f8f9fa; cursor: pointer; min-width: 110px; text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .multiselect-btn:hover { border-color: #0A5F55; }
     .multiselect-btn.tem-selecao { border-color: #0A5F55; color: #0A5F55; background: #E6F4EE; }
     .multiselect-panel { display: none; position: absolute; top: calc(100% + 4px); left: 0; background: white; border: 1px solid #dcdfe4; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); padding: 8px; z-index: 50; max-height: 240px; overflow-y: auto; min-width: 150px; }
     .multiselect-panel.aberto { display: block; }
-    .multiselect-panel label { display: flex; align-items: center; gap: 7px; padding: 5px 6px; font-size: 0.8rem; font-weight: 500; color: #2c3e50; text-transform: none; cursor: pointer; border-radius: 4px; white-space: nowrap; }
+    .multiselect-panel label { display: flex; align-items: center; gap: 7px; padding: 5px 6px; font-size: 0.8rem; font-weight: 500; color: #1F2933; text-transform: none; cursor: pointer; border-radius: 4px; white-space: nowrap; }
     .multiselect-panel label:hover { background: #f8f9fa; }
     .multiselect-panel hr { border: none; border-top: 1px solid #eef1f4; margin: 4px 0; }
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 8px; }
     .kpi-card { background: white; padding: 14px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); text-align: center; border-top: 3px solid var(--primary); }
-    .kpi-label { font-size: 0.65rem; font-weight: 700; color: #7f8c8d; text-transform: uppercase; }
-    .kpi-val { font-size: 1.6rem; font-weight: 800; color: #2c3e50; margin-top: 4px; }
+    .kpi-label { font-size: 0.65rem; font-weight: 700; color: #5B5C65; text-transform: uppercase; }
+    .kpi-val { font-size: 1.6rem; font-weight: 800; color: #1F2933; margin-top: 4px; }
     .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; }
     .chart-box { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
-    .chart-title { font-weight: 700; font-size: 0.85rem; color: #34495e; margin-bottom: 10px; }
+    .chart-title { font-weight: 700; font-size: 0.85rem; color: #5B5C65; margin-bottom: 10px; }
     .canvas-wrapper { position: relative; height: 260px; }
     table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
     th, td { padding: 10px 12px; font-size: 0.8rem; border-bottom: 1px solid #eef1f4; }
-    th { background: #f8f9fa; text-align: left; font-size: 0.7rem; text-transform: uppercase; color: #7f8c8d; }
+    th { background: #f8f9fa; text-align: left; font-size: 0.7rem; text-transform: uppercase; color: #5B5C65; }
     .rodape { text-align: center; color: #b0bec5; font-size: 0.7rem; margin-top: 40px; }
     .nota-fixa { font-size: 0.7rem; color: #9e9e9e; font-style: italic; margin-top: -8px; margin-bottom: 14px; }
     .tabs-nav { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid #e6e9ed; }
-    .tab-btn { padding: 10px 18px; border: none; background: none; font-weight: 700; font-size: 0.85rem; color: #7f8c8d; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+    .tab-btn { padding: 10px 18px; border: none; background: none; font-weight: 700; font-size: 0.85rem; color: #5B5C65; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; }
     .tab-btn:hover { color: #0A5F55; }
     .tab-btn.ativa { color: #0A5F55; border-bottom-color: #0A5F55; }
     .print-only-header { display: none; }
@@ -2744,7 +2784,7 @@
     .mc-topo { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
     .mc-filtros { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0; font-size:0.78rem; }
     .mc-filtros input, .mc-filtros select { padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.78rem; }
-    .mc-abas button { border:none; background:none; padding:8px 14px; font-weight:800; color:#7f8c8d; border-bottom:3px solid transparent; cursor:pointer; }
+    .mc-abas button { border:none; background:none; padding:8px 14px; font-weight:800; color:#5B5C65; border-bottom:3px solid transparent; cursor:pointer; }
     .mc-abas button.ativa { color:#0A5F55; border-bottom-color:#00995D; }
     #mcTabela th { cursor:pointer; white-space:nowrap; } #mcTabela th:hover { color:#0A5F55; }
     #mcTabela td { font-size:0.74rem; vertical-align:top; }
@@ -2812,7 +2852,7 @@
     <div class="kpi-grid">
         <div class="kpi-card"><div class="kpi-label">Total no Período</div><div class="kpi-val" id="kpiTotal">0</div></div>
         <div class="kpi-card"><div class="kpi-label">Conciliados</div><div class="kpi-val" id="kpiConciliados" style="color:#00995D;">0</div></div>
-        <div class="kpi-card"><div class="kpi-label">Em Andamento</div><div class="kpi-val" id="kpiAndamento" style="color:#ff9800;">0</div></div>
+        <div class="kpi-card"><div class="kpi-label">Em Andamento</div><div class="kpi-val" id="kpiAndamento" style="color:#F47920;">0</div></div>
         <div class="kpi-card"><div class="kpi-label">Aguardando</div><div class="kpi-val" id="kpiAguardando" style="color:#9e9e9e;">0</div></div>
         <div class="kpi-card"><div class="kpi-label">Eficiência no Período</div><div class="kpi-val" id="kpiEficiencia">0%</div></div>
     </div>
@@ -2825,10 +2865,10 @@
     <h2>Análise de Tempo — onde o tempo está sendo gasto</h2>
     <div class="nota-fixa" style="margin-top:-8px;">O "SLA" sozinho mistura tempo parado esperando alguém pegar com tempo de processamento — por isso os dois são mostrados separados abaixo. Calculado a partir da linha do tempo de cada item (clique no ícone 🕐 de qualquer item na tela principal para ver o detalhe individual) — só itens já conciliados que têm esse detalhe registrado contam aqui. A linha do tempo só existe nos itens que ESTE navegador acompanhou ao vivo — a planilha guarda o estado atual, não o percurso. Por isso, num computador que só leu dados da planilha, estes cinco números aparecem zerados; não é falha, é ausência do detalhe.</div>
     <div class="kpi-grid">
-        <div class="kpi-card" style="border-top-color:#e67e22;"><div class="kpi-label">🕓 Tempo médio PARADO esperando (Origem)</div><div class="kpi-val" id="kpiEsperaMedia" style="color:#e67e22;">0m</div></div>
-        <div class="kpi-card" style="border-top-color:#e67e22;"><div class="kpi-label">Mediana do tempo parado</div><div class="kpi-val" id="kpiEsperaMediana" style="color:#e67e22;">0m</div></div>
-        <div class="kpi-card" style="border-top-color:#2980b9;"><div class="kpi-label">⚙️ Tempo médio EM PROCESSAMENTO (com colaboradora)</div><div class="kpi-val" id="kpiProcessamentoMedia" style="color:#2980b9;">0m</div></div>
-        <div class="kpi-card" style="border-top-color:#2980b9;"><div class="kpi-label">Mediana do tempo processando</div><div class="kpi-val" id="kpiProcessamentoMediana" style="color:#2980b9;">0m</div></div>
+        <div class="kpi-card" style="border-top-color:#F47920;"><div class="kpi-label">🕓 Tempo médio PARADO esperando (Origem)</div><div class="kpi-val" id="kpiEsperaMedia" style="color:#F47920;">0m</div></div>
+        <div class="kpi-card" style="border-top-color:#F47920;"><div class="kpi-label">Mediana do tempo parado</div><div class="kpi-val" id="kpiEsperaMediana" style="color:#F47920;">0m</div></div>
+        <div class="kpi-card" style="border-top-color:#0A5F55;"><div class="kpi-label">⚙️ Tempo médio EM PROCESSAMENTO (com colaboradora)</div><div class="kpi-val" id="kpiProcessamentoMedia" style="color:#0A5F55;">0m</div></div>
+        <div class="kpi-card" style="border-top-color:#0A5F55;"><div class="kpi-label">Mediana do tempo processando</div><div class="kpi-val" id="kpiProcessamentoMediana" style="color:#0A5F55;">0m</div></div>
         <div class="kpi-card"><div class="kpi-label">Amostras com linha do tempo completa</div><div class="kpi-val" id="kpiEsperaAmostras">0</div></div>
     </div>
 
@@ -2920,17 +2960,17 @@
         <div class="nota-fixa" style="margin-top:-8px;">Quantos dias úteis (seg–sex, sem feriados) cada item ainda em aberto está parado, contando a partir de quando entrou — pra saber o que precisa de atenção urgente primeiro.</div>
         <div class="kpi-grid">
             <div class="kpi-card" style="border-top-color:#00995D;"><div class="kpi-label">0–1 dia útil</div><div class="kpi-val" id="statAging0a1" style="color:#00995D;">0</div></div>
-            <div class="kpi-card" style="border-top-color:#fbc02d;"><div class="kpi-label">1–3 dias úteis</div><div class="kpi-val" id="statAging1a3" style="color:#f9a825;">0</div></div>
-            <div class="kpi-card" style="border-top-color:#f9a825;"><div class="kpi-label">3–7 dias úteis</div><div class="kpi-val" id="statAging3a7" style="color:#F47920;">0</div></div>
+            <div class="kpi-card" style="border-top-color:#FFCB08;"><div class="kpi-label">1–3 dias úteis</div><div class="kpi-val" id="statAging1a3" style="color:#8a6d00;">0</div></div>
+            <div class="kpi-card" style="border-top-color:#FFCB08;"><div class="kpi-label">3–7 dias úteis</div><div class="kpi-val" id="statAging3a7" style="color:#F47920;">0</div></div>
             <div class="kpi-card" style="border-top-color:#c62828;"><div class="kpi-label">Mais de 7 dias úteis</div><div class="kpi-val" id="statAgingMais7" style="color:#c62828;">0</div></div>
         </div>
         <div class="chart-box" style="margin-top:12px;">
             <div class="chart-title">Itens mais antigos ainda em aberto (top 10)</div>
             <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
                 <thead><tr>
-                    <th style="text-align:left; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#7f8c8d; font-size:0.68rem; text-transform:uppercase;">Documento</th>
-                    <th style="text-align:center; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#7f8c8d; font-size:0.68rem; text-transform:uppercase;">Responsável</th>
-                    <th style="text-align:center; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#7f8c8d; font-size:0.68rem; text-transform:uppercase;">Dias Parado</th>
+                    <th style="text-align:left; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#5B5C65; font-size:0.68rem; text-transform:uppercase;">Documento</th>
+                    <th style="text-align:center; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#5B5C65; font-size:0.68rem; text-transform:uppercase;">Responsável</th>
+                    <th style="text-align:center; padding:7px 8px; border-bottom:2px solid #e0e6ed; color:#5B5C65; font-size:0.68rem; text-transform:uppercase;">Dias Parado</th>
                 </tr></thead>
                 <tbody id="tbodyAging"></tbody>
             </table>
@@ -2976,7 +3016,7 @@
         <div class="nota-fixa" style="margin-top:-8px;">Referente ao dia selecionado no painel principal (${s.dataSelecionada}) — não muda com o filtro de período acima, igual aos outros indicadores fixos da aba "Visão Geral".</div>
         <div class="kpi-grid">
             <div class="kpi-card" style="border-top-color:#00995D;"><div class="kpi-label">✅ Sem Divergência</div><div class="kpi-val" id="statSolusOk" style="color:#00995D;">0%</div></div>
-            <div class="kpi-card" style="border-top-color:#f9a825;"><div class="kpi-label">⚠️ Com Alerta</div><div class="kpi-val" id="statSolusAlerta" style="color:#f9a825;">0%</div></div>
+            <div class="kpi-card" style="border-top-color:#FFCB08;"><div class="kpi-label">⚠️ Com Alerta</div><div class="kpi-val" id="statSolusAlerta" style="color:#8a6d00;">0%</div></div>
             <div class="kpi-card" style="border-top-color:#c62828;"><div class="kpi-label">❌ Não Lançado</div><div class="kpi-val" id="statSolusNaoLancado" style="color:#c62828;">0%</div></div>
             <div class="kpi-card" style="border-top-color:#8d6e00;"><div class="kpi-label">🚫 Sem Arquivo</div><div class="kpi-val" id="statSolusSemArquivo" style="color:#8d6e00;">0%</div></div>
         </div>
@@ -3147,7 +3187,7 @@
             <tr>
                 <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9; max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="\${escD(r.arquivo || '')}">\${escD(r.arquivo || '—')}</td>
                 <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9; text-align:center;">\${r.resp || '—'}</td>
-                <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9; text-align:center; font-weight:800; color:\${r.diasParado > 7 ? '#c62828' : (r.diasParado > 3 ? '#F47920' : '#7f8c8d')};">\${r.diasParado} dia(s) útil(eis)</td>
+                <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9; text-align:center; font-weight:800; color:\${r.diasParado > 7 ? '#c62828' : (r.diasParado > 3 ? '#F47920' : '#5B5C65')};">\${r.diasParado} dia(s) útil(eis)</td>
             </tr>\`).join('') : '<tr><td colspan="3" style="text-align:center; color:#94a3b8; padding:16px;">Nenhum item pendente no período filtrado.</td></tr>';
 
         // --- SLA médio por tipo de documento ---
@@ -3157,7 +3197,7 @@
             const vals = dados.filter(r => r.t === t && r.sla !== null).map(r => r.sla);
             return vals.length ? Math.round(media(vals)) : 0;
         });
-        montarGrafico('chartSlaPorTipo', 'bar', tiposOrdem.map(t => tiposLabel[t] || t), [{ label: 'SLA médio (min)', data: slaPorTipo, backgroundColor: '#3498db', borderRadius: 6 }], { scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } });
+        montarGrafico('chartSlaPorTipo', 'bar', tiposOrdem.map(t => tiposLabel[t] || t), [{ label: 'SLA médio (min)', data: slaPorTipo, backgroundColor: '#0A5F55', borderRadius: 6 }], { scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } });
 
         // --- Volume e eficiência por dia da semana ---
         const nomesDias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -3174,8 +3214,8 @@
         const efSemana = porDiaSemana.map(d => d.total > 0 ? Math.round((d.conciliados / d.total) * 100) : 0);
         montarGrafico('chartDiaSemana', 'bar', nomesDias,
             [
-                { label: 'Volume', data: volumeSemana, backgroundColor: '#3498db', borderRadius: 6, yAxisID: 'y' },
-                { label: 'Eficiência (%)', data: efSemana, type: 'line', borderColor: '#e67e22', backgroundColor: '#e67e2222', yAxisID: 'y1', tension: 0.25 }
+                { label: 'Volume', data: volumeSemana, backgroundColor: '#0A5F55', borderRadius: 6, yAxisID: 'y' },
+                { label: 'Eficiência (%)', data: efSemana, type: 'line', borderColor: '#F47920', backgroundColor: '#F4792022', yAxisID: 'y1', tension: 0.25 }
             ],
             { plugins: { legend: { display: true, position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 }, position: 'left' }, y1: { beginAtZero: true, max: 100, position: 'right', grid: { drawOnChartArea: false } } } });
 
@@ -3271,8 +3311,8 @@
         if (avisoPrevisao) avisoPrevisao.style.display = 'none';
         montarGrafico('chartPrevisao', 'line', labelsPrevisao,
             [
-                { label: 'Histórico', data: [...volumesPorDia, ...Array(7).fill(null)], borderColor: '#3498db', backgroundColor: '#3498db22', tension: 0.25 },
-                { label: 'Previsão (regressão linear)', data: [...Array(Math.max(0, volumesPorDia.length - 1)).fill(null), volumesPorDia[volumesPorDia.length - 1] ?? null, ...previsao], borderColor: '#e67e22', borderDash: [6, 4], backgroundColor: '#e67e2222', tension: 0.25 }
+                { label: 'Histórico', data: [...volumesPorDia, ...Array(7).fill(null)], borderColor: '#0A5F55', backgroundColor: '#0A5F5522', tension: 0.25 },
+                { label: 'Previsão (regressão linear)', data: [...Array(Math.max(0, volumesPorDia.length - 1)).fill(null), volumesPorDia[volumesPorDia.length - 1] ?? null, ...previsao], borderColor: '#F47920', borderDash: [6, 4], backgroundColor: '#F4792022', tension: 0.25 }
             ],
             { plugins: { legend: { display: true, position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } });
         }
@@ -3744,7 +3784,7 @@
         montarGrafico('chartEvolucao', 'line',
             diasOrdenados,
             [
-                { label: 'Total de Lançamentos', data: diasOrdenados.map(d => porDia[d].total), borderColor: '#3498db', backgroundColor: '#3498db22', yAxisID: 'y', tension: 0.25 },
+                { label: 'Total de Lançamentos', data: diasOrdenados.map(d => porDia[d].total), borderColor: '#0A5F55', backgroundColor: '#0A5F5522', yAxisID: 'y', tension: 0.25 },
                 { label: 'Eficiência (%)', data: diasOrdenados.map(d => porDia[d].total > 0 ? Math.round((porDia[d].conciliados/porDia[d].total)*100) : 0), borderColor: '#00995D', backgroundColor: '#00995D22', yAxisID: 'y1', tension: 0.25 }
             ],
             { plugins: { legend: { display: true, position: 'bottom' } },
@@ -4057,7 +4097,7 @@
             el.parentElement.style.color = '#94a3b8';
         } else {
             el.innerText = `${conectados.length}/${chaves.length} conectadas: ${conectados.map(k => nomes[k] || k).join(', ')}`;
-            el.parentElement.style.color = conectados.length === chaves.length ? '#0A5F55' : '#f9a825';
+            el.parentElement.style.color = conectados.length === chaves.length ? '#0A5F55' : '#FFCB08';
         }
     }
 
@@ -4291,7 +4331,7 @@
             return;
         }
 
-        const avisoRemoto = astenFonteRemota ? `<tr><td colspan="2" style="text-align:center; padding:8px; color:#f9a825; font-size:0.75rem; font-style:italic;">📡 Exibindo dados sincronizados da planilha (relatório Asten desta data não está na pasta conectada nesta máquina)</td></tr>` : '';
+        const avisoRemoto = astenFonteRemota ? `<tr><td colspan="2" style="text-align:center; padding:8px; color:#8a6d00; font-size:0.75rem; font-style:italic;">📡 Exibindo dados sincronizados da planilha (relatório Asten desta data não está na pasta conectada nesta máquina)</td></tr>` : '';
         corpo.innerHTML = avisoRemoto + astenPendentesAtual.map(nome => `
             <tr>
                 <td>${esc(nome)}</td>
@@ -4708,7 +4748,23 @@
     //  🔁 DUPLICADO_SOLUS            mesma NF+CNPJ lançada mais de uma vez no Solus
     //  📝 NOME_FORA_PADRAO           nome do arquivo não permite extrair NF/CNPJ (antes sumia da conferência)
     //  ⏳ AGUARDANDO_SOLUS           relatório Solus da data ainda não disponível (antes tudo virava "Não Lançado")
+    const _solusJanela = { regs: [], ref: '', em: 0 };
+    async function carregarJanelaSolus() {
+        const iso = document.getElementById('data-historico').value || getHojeISO();
+        if (_solusJanela.ref === iso && Date.now() - _solusJanela.em < 600000) return;
+        _solusJanela.ref = iso; _solusJanela.em = Date.now();
+        if (!GS_CONFIG.ativo || !GS_CONFIG.webAppUrl) return;
+        const regs = [], d = new Date(iso + 'T12:00:00'); let n = 0, g = 0;
+        while (n < 7 && g++ < 20) {
+            d.setDate(d.getDate() - 1); if (!ehDiaUtil(d)) continue; n++;
+            const di = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            try { (await buscarSolusSnapshotRemoto(di)).forEach(r => regs.push({ r, data: isoParaBr(di) })); } catch (e) {}
+        }
+        _solusJanela.regs = regs;
+        try { atualizarPainelSolus(); } catch (e) {}
+    }
     function calcularAuditoriaSolus(chavesFiltradas) {
+        try { carregarJanelaSolus(); } catch (e) {}
         const resultado = [];
         const solus = solusRegistrosAtual || [];
         const usados = new Set();
@@ -4768,9 +4824,18 @@
             if (!q || q < 2) { const outros = rem.filter(o => !db[o]); if (outros.length) out.push(`Mesma NF+CNPJ já lançada na planilha em outro arquivo (${outros.map(o => (_lancadosRemotos.datas[o] || '?')).join(', ')}) — possível pagamento em duplicidade`); }
             return out; };
 
+        // Lançado no Solus em OUTRO dia (relatórios dos 7 dias úteis anteriores, guardados na planilha)
+        const acharNaJanela = info => {
+            for (const x of _solusJanela.regs) { const r = x.r;
+                if (r.cnpj ? (r.cnpj === info.cnpj && r.nf === info.nf) : (nfCompativel(r, info) && (eqValor(r, info) || (r.prestador && fornecedorConferePdf(r.prestador, info.fornecedor))))) return x; }
+            return null; };
         lancados.forEach(c => {
             const base = { arquivo: c.n, nf: c.info.nf, fornecedor: c.info.fornecedor || '', cnpj: c.info.cnpj, valorBruto: c.info.valorBruto, valorLiquido: c.info.valorLiquido, resp: c.reg.resp || '-' };
-            if (c.match === undefined) {
+            const jan = c.match === undefined ? acharNaJanela(c.info) : null;
+            if (jan) {
+                const dv = [`Lançado no Solus em ${jan.data} (o arquivo foi para Lançados em ${c.reg.d || 'outra data'})`].concat(detectarDivergencias(c.info, jan.r, 'EXATO'));
+                resultado.push(Object.assign(base, { status: dv.length > 1 ? 'CONCILIADO_COM_ALERTA' : 'CONCILIADO_OUTRA_DATA', divergencias: dv, prestadorSolus: jan.r.prestador, vencimento: jan.r.vencimento, valor: jan.r.valor }));
+            } else if (c.match === undefined) {
                 resultado.push(Object.assign(base, { status: temRelatorio ? 'NAO_LANCADO' : 'AGUARDANDO_SOLUS', divergencias: avisosDup(c.info), prestadorSolus: '-', vencimento: '-', valor: 0 }));
             } else {
                 const rs = solus[c.match];
@@ -4785,9 +4850,10 @@
             const p = (c.reg.d_entrada || c.reg.d || '').split('/');
             if (p.length === 3) diasParado = diasUteisEntre(c.reg.d_entrada || c.reg.d, isoParaBr(hojeIso));
             const base = { arquivo: c.n, nf: c.info.nf, fornecedor: c.info.fornecedor || '', cnpj: c.info.cnpj, valorBruto: c.info.valorBruto, valorLiquido: c.info.valorLiquido, resp: c.reg.resp || '-', diasParado };
-            if (c.match !== undefined) {
-                const rs = solus[c.match];
-                const dv = ['Já lançado no Solus, mas o arquivo ainda não foi movido para Lançados'].concat(detectarDivergencias(c.info, rs, 'EXATO'));
+            const janP = c.match === undefined ? acharNaJanela(c.info) : null;
+            if (c.match !== undefined || janP) {
+                const rs = c.match !== undefined ? solus[c.match] : janP.r;
+                const dv = [`Já lançado no Solus${janP ? ' em ' + janP.data : ''}, mas o arquivo ainda não foi movido para Lançados`].concat(detectarDivergencias(c.info, rs, 'EXATO'));
                 resultado.push(Object.assign(base, { status: 'LANCADO_SEM_MOVER', divergencias: dv, prestadorSolus: rs.prestador, vencimento: rs.vencimento, valor: rs.valor }));
             } else {
                 resultado.push(Object.assign(base, { status: 'PENDENTE', divergencias: avisosDup(c.info), prestadorSolus: '-', vencimento: '-', valor: 0 }));
@@ -4972,6 +5038,8 @@
     }
 
     async function processar() {
+        // Só o usuário com liberação "Conectar pastas" (sentinela) lê e registra as pastas
+        if (loginObrigatorio() && (!AUTH || !pode('pastas'))) return;
         let algumaConectada = Object.values(conexoes).some(h => h !== null);
         if (!algumaConectada) return;
         if (isProcessing) return;
@@ -5528,11 +5596,44 @@
     // Resumo das 3 conferências de cada documento: Asten (veio da origem esperada), Solus (lançamento confere)
     // e Dados (nome no padrão + CNPJ/CPF com dígito verificador válido).
     const CHIP_SOLUS_CURTO = { CONCILIADO: 'Solus ✓', CONCILIADO_OUTRA_DATA: 'Solus ✓', CONCILIADO_COM_ALERTA: 'Solus ⚠', NAO_LANCADO: 'Solus ✗', LANCADO_SEM_MOVER: 'Solus ✓ mover', NOME_FORA_PADRAO: 'Solus ?', PENDENTE: 'Solus …', AGUARDANDO_SOLUS: 'Solus ⏳' };
+    // ===== CONFERÊNCIA ASTEN POR DOCUMENTO =====
+    // Antes: só valia o nome EXATO e só o relatório do dia da tela. Nota baixada hoje que estava no Asten de ontem,
+    // ou com o nome digitado um pouco diferente, aparecia como "Fora Asten". Agora: dia + últimos 7 dias úteis + CNPJ/NF.
+    const _astenJanela = { porChave: new Map(), porNfCnpj: new Map(), ref: '', em: 0 };
+    function chaveNfCnpj(nome) { const c = camposDoNome(String(nome || '').replace(/\.[^.]+$/, '') + '.pdf'); return c && c.nf && c.cnpj && c.nf !== '0' ? `${_soDig(c.cnpj)}|${_soDig(c.nf)}` : ''; }
+    async function carregarJanelaAsten() {
+        const iso = document.getElementById('data-historico').value || getHojeISO();
+        if (_astenJanela.ref === iso && Date.now() - _astenJanela.em < 600000) return;
+        _astenJanela.ref = iso; _astenJanela.em = Date.now();
+        if (!GS_CONFIG.ativo || !GS_CONFIG.webAppUrl) return;
+        const porChave = new Map(), porNf = new Map();
+        const d = new Date(iso + 'T12:00:00'); let n = 0, guarda = 0;
+        while (n < 7 && guarda++ < 20) {
+            d.setDate(d.getDate() - 1); if (!ehDiaUtil(d)) continue; n++;
+            const di = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            try { const set = await buscarAstenSnapshotRemoto(di); set.forEach(nm => { const k = chaveArquivo(nm); if (!porChave.has(k)) porChave.set(k, isoParaBr(di)); const kn = chaveNfCnpj(nm); if (kn && !porNf.has(kn)) porNf.set(kn, { data: isoParaBr(di), nome: nm }); }); } catch (e) {}
+        }
+        _astenJanela.porChave = porChave; _astenJanela.porNfCnpj = porNf;
+        try { atualizarTela(); } catch (e) {}
+    }
+    function statusAstenDoc(n) {
+        const hoje = astenEsperadosAtual || new Set();
+        if (!hoje.size && !_astenJanela.porChave.size) return { tipo: 'neutro', txt: 'Asten —', tit: 'Relatório Asten da data não disponível', csv: 'Sem relatório' };
+        const k = chaveArquivo(n);
+        for (const e of hoje) if (chaveArquivo(e) === k) return { tipo: 'ok', txt: 'Asten ✓', tit: 'Consta no relatório Asten do dia', csv: 'Consta' };
+        if (_astenJanela.porChave.has(k)) { const d = _astenJanela.porChave.get(k); return { tipo: 'ok', txt: `Asten ✓ ${d.slice(0, 5)}`, tit: `Consta no relatório Asten de ${d}`, csv: 'Consta (' + d + ')' }; }
+        const kn = chaveNfCnpj(n);
+        if (kn) {
+            for (const e of hoje) if (chaveNfCnpj(e) === kn) return { tipo: 'alerta', txt: 'Asten ≈', tit: `Consta no Asten com NOME DIFERENTE: ${e}`, csv: 'Consta com nome diferente' };
+            const j = _astenJanela.porNfCnpj.get(kn); if (j) return { tipo: 'alerta', txt: `Asten ≈ ${j.data.slice(0, 5)}`, tit: `Consta no Asten de ${j.data} com NOME DIFERENTE: ${j.nome}`, csv: 'Consta com nome diferente (' + j.data + ')' };
+        }
+        return { tipo: 'alerta', txt: 'Fora Asten', tit: 'Não consta no Asten do dia nem dos 7 dias úteis anteriores — conferir a origem do documento', csv: 'Não consta' };
+    }
+
     function chipsConferencia(n, chavesAsten) {
         const chip = (tipo, txt, tit) => `<span class="chip chip-${tipo}" title="${esc(tit)}">${txt}</span>`;
         const out = [];
-        if (chavesAsten.size) out.push(chavesAsten.has(chaveArquivo(n)) ? chip('ok', 'Asten ✓', 'Consta no relatório Asten do dia') : chip('alerta', 'Fora Asten', 'Não consta no relatório Asten da data — conferir a origem do documento'));
-        else out.push(chip('neutro', 'Asten —', 'Relatório Asten da data não disponível'));
+        { const sa = statusAstenDoc(n); out.push(chip(sa.tipo, sa.txt, sa.tit)); }
         const cs = _confSolusPorArquivo[n];
         if (cs) { const st = STATUS_SOLUS[cs.status] || {}; out.push(chip((st.chip || 'chip-neutro').replace('chip-', ''), CHIP_SOLUS_CURTO[cs.status] || 'Solus', [st.label].concat(cs.divergencias || []).join(' | '))); }
         else out.push(chip('neutro', 'Solus —', 'Fora do recorte da conferência Solus (data/aba)'));
@@ -5551,6 +5652,7 @@
 
     function atualizarTela() {
         try { montarIndiceDuplicidade(); } catch (e) {}
+        try { carregarJanelaAsten(); } catch (e) {}
         const corpo = document.getElementById('tabela-corpo');
         const now = Date.now();
         let ok = 0, p = 0;
@@ -5627,7 +5729,7 @@
                 <td>
                     <div style="display:flex; gap:8px; align-items:flex-start;">
                         <div class="file-entry ${isDireto ? 'file-direto' : catC}"><span class="tag-small">${esc(r.t)}</span>${esc(n)}</div>
-                        ${r.erroLeitura ? `<span title="Falha ao extrair dados deste arquivo automaticamente (${esc(r.erroLeitura)}). O item foi registrado mesmo assim, mas confira manualmente." style="color:#f9a825; cursor:help; font-size:0.9rem;">🛠️</span>` : ''}
+                        ${r.erroLeitura ? `<span title="Falha ao extrair dados deste arquivo automaticamente (${esc(r.erroLeitura)}). O item foi registrado mesmo assim, mas confira manualmente." style="color:#8a6d00; cursor:help; font-size:0.9rem;">🛠️</span>` : ''}
                     </div>
                     ${btnCiencia}
                 </td>
@@ -5685,7 +5787,7 @@
         chavesFiltradas.forEach(n => {
             const r = db[n], info = infoDoItem(n), cs = _confSolusPorArquivo[n];
             const minsSLA = (r.a === "CONCILIADO" && r.ts_in && r.ts_out) ? Math.floor(calcularSLA(r.ts_in, r.ts_out) / 60000) : (r.slaMinutosSalvo || "");
-            const confAsten = chavesAsten.size ? (chavesAsten.has(chaveArquivo(n)) ? 'Consta' : 'Não consta') : 'Sem relatório';
+            const confAsten = statusAstenDoc(n).csv;
             const confDados = (!info.cnpj || !info.nf) ? 'Nome fora do padrão' : (validarDocumento(info.cnpj) ? 'OK' : 'CNPJ/CPF inválido');
             const valor = info.valorLiquido != null ? Number(info.valorLiquido).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '';
             linhas.push([r.h, r.d_entrada || r.d, r.a === 'CONCILIADO' ? r.d : '', r.t, n, info.nf || '', info.cnpj || '', info.fornecedor || '', valor, r.resp || '', r.f, r.a, minsSLA, minsSLA !== '' ? formatarTempoSLA(Number(minsSLA) * 60000) : '',
@@ -5696,6 +5798,250 @@
         a.href = URL.createObjectURL(new Blob(["﻿" + linhas.join('\r\n')], { type: 'text/csv;charset=utf-8;' }));
         a.download = `Relatorio_Lancamentos_${document.getElementById('data-historico').value || getHojeISO()}.csv`;
         a.click();
+    }
+
+    // =====================================================================================
+    //  USUÁRIOS E SENHAS — login com sessão persistente ("manter conectado") e liberações por usuário
+    //  A sessão fica salva neste navegador e renova sozinha a cada uso (90 dias sem uso = expira).
+    // =====================================================================================
+    const AUTH_KEY = 'monitor_sessao';
+    let AUTH = null; // { sessao, usuario: { login, nome, perfil, perms[], trocarSenha } }
+    const PERM_ROTULOS = { ciencia: 'Dar ciência / responsável', excluir: 'Excluir registros', devolucao: 'Devoluções (motivo/encerrar)', pastas: 'Conectar pastas (sentinela)',
+                           planilha: 'Configurar planilha', relatorios: 'Relatórios / CSV / imprimir', dashboard: 'Dashboard', usuarios: 'Gerenciar usuários' };
+    const PERFIS_PADRAO = { MASTER: Object.keys(PERM_ROTULOS), GESTOR: ['ciencia', 'excluir', 'devolucao', 'pastas', 'planilha', 'relatorios', 'dashboard'],
+                            SENTINELA: ['pastas', 'relatorios', 'dashboard'], OPERADOR: ['ciencia', 'devolucao', 'relatorios', 'dashboard'], CONSULTA: ['relatorios', 'dashboard'] };
+    function authLer() { try { return JSON.parse(localStorage.getItem(AUTH_KEY) || sessionStorage.getItem(AUTH_KEY) || 'null'); } catch (e) { return null; } }
+    function authGravar(a, manter) {
+        try { localStorage.removeItem(AUTH_KEY); sessionStorage.removeItem(AUTH_KEY); if (a) (manter === false ? sessionStorage : localStorage).setItem(AUTH_KEY, JSON.stringify(a)); } catch (e) {}
+    }
+    function loginObrigatorio() { return !!(GS_CONFIG.ativo && GS_CONFIG.webAppUrl); } // sem planilha não há onde validar usuários
+    function pode(p) { if (!loginObrigatorio()) return true; return !!(AUTH && AUTH.usuario && (AUTH.usuario.perms || []).includes(p)); }
+    function usuarioAtual() { return AUTH && AUTH.usuario ? AUTH.usuario.login : ''; }
+
+    // Toda chamada à planilha leva a sessão do usuário (a planilha pode exigir login: EXIGIR_LOGIN no Código.gs)
+    const _fetchOriginal = (window.fetch || (() => Promise.reject(new Error("fetch indisponível")))).bind(window);
+    window.fetch = function (url, opt) {
+        try {
+            const u = String(url && url.url ? url.url : url);
+            if (AUTH && AUTH.sessao && GS_CONFIG.webAppUrl && u.indexOf(GS_CONFIG.webAppUrl) === 0) {
+                if (!opt || !opt.method || String(opt.method).toUpperCase() === 'GET') { if (!/[?&]sessao=/.test(u)) url = u + (u.includes('?') ? '&' : '?') + 'sessao=' + encodeURIComponent(AUTH.sessao); }
+                else if (typeof opt.body === 'string' && opt.body.charAt(0) === '{') { const b = JSON.parse(opt.body); if (!b.sessao) { b.sessao = AUTH.sessao; if (!b.usuario_login) b.usuario_login = usuarioAtual(); opt = Object.assign({}, opt, { body: JSON.stringify(b) }); } }
+            }
+        } catch (e) {}
+        return _fetchOriginal(url, opt);
+    };
+    async function authChamar(tipo, extra) {
+        const r = await _fetchOriginal(GS_CONFIG.webAppUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(Object.assign({ token: GS_CONFIG.token, tipoRegistro: tipo, sessao: AUTH && AUTH.sessao }, extra || {})) });
+        return r.json();
+    }
+    function registrarAcao(acao, detalhe) { if (AUTH && loginObrigatorio()) authChamar('auth_log', { acao, detalhe: String(detalhe || '').slice(0, 480) }).catch(() => {}); }
+    function dispositivo() { const ua = navigator.userAgent || ''; return (/Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : 'Navegador') + ' · ' + (/Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android' : /Mac/.test(ua) ? 'Mac' : 'outro') + ' · ' + location.host; }
+
+    // ---------- Tela de login ----------
+    function mostrarLogin(aoEntrar, mensagem) {
+        document.querySelectorAll('.tela-login').forEach(e => e.remove());
+        const el = document.createElement('div');
+        el.className = 'tela-login no-print';
+        el.innerHTML = `<div class="login-card">
+            <div class="login-topo"><span class="slot-logo" data-h="44"></span></div>
+            <div class="login-titulo">Monitor de Lançamentos NF SUP</div>
+            <div class="login-sub">Suprimentos · Unimed Vale do Sepotuba</div>
+            ${mensagem ? `<div class="login-aviso">${esc(mensagem)}</div>` : ''}
+            <label>Usuário</label><input id="lg-user" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ex.: daniela">
+            <label>Senha</label><div class="login-senha"><input id="lg-pass" type="password" autocomplete="current-password"><button type="button" onclick="const i=document.getElementById('lg-pass'); i.type=i.type==='password'?'text':'password';" title="Mostrar/ocultar">👁</button></div>
+            <label class="login-manter"><input type="checkbox" id="lg-manter" checked> Manter conectado neste computador</label>
+            <div id="lg-msg" class="login-msg"></div>
+            <button class="login-btn" id="lg-btn">Entrar</button>
+            <div class="login-rodape">Esqueceu a senha ou precisa de acesso? Fale com o usuário <b>MASTER</b>.<br><a href="#" onclick="abrirConfigPlanilhaSemLogin(); return false;">⚙️ Configurar planilha deste computador</a></div>
+        </div>`;
+        document.body.appendChild(el);
+        renderizarLogos();
+        const user = el.querySelector('#lg-user'), pass = el.querySelector('#lg-pass'), msg = el.querySelector('#lg-msg'), btn = el.querySelector('#lg-btn');
+        try { const ult = localStorage.getItem('monitor_ultimo_login'); if (ult) { user.value = ult; setTimeout(() => pass.focus(), 50); } else setTimeout(() => user.focus(), 50); } catch (e) {}
+        const entrar = async () => {
+            if (!user.value.trim() || !pass.value) { msg.textContent = 'Informe usuário e senha.'; return; }
+            btn.disabled = true; btn.textContent = 'Entrando…'; msg.textContent = '';
+            try {
+                const r = await authChamar('auth_login', { login: user.value.trim(), senha: pass.value, dispositivo: dispositivo() });
+                if (!r.ok) { msg.textContent = r.erro || 'Não foi possível entrar.'; btn.disabled = false; btn.textContent = 'Entrar'; pass.select(); return; }
+                AUTH = { sessao: r.sessao, usuario: r.usuario, em: Date.now() };
+                authGravar(AUTH, el.querySelector('#lg-manter').checked);
+                try { localStorage.setItem('monitor_ultimo_login', r.usuario.login); } catch (e) {}
+                el.remove(); aplicarPermissoes();
+                if (r.usuario.trocarSenha) abrirTrocarSenha(true, aoEntrar); else if (aoEntrar) aoEntrar();
+            } catch (e) { msg.textContent = 'Sem resposta da planilha. Confira a internet e a configuração (⚙️ abaixo).'; btn.disabled = false; btn.textContent = 'Entrar'; }
+        };
+        btn.onclick = entrar;
+        [user, pass].forEach(i => i.addEventListener('keydown', ev => { if (ev.key === 'Enter') entrar(); }));
+    }
+    function abrirConfigPlanilhaSemLogin() {
+        document.querySelectorAll('.tela-login').forEach(e => e.style.display = 'none'); _abrirConfigPlanilhaOriginal();
+        const t = setInterval(() => { if (document.querySelector('.modal-planilha')) return; clearInterval(t); if (!AUTH) document.querySelectorAll('.tela-login').forEach(e => e.style.display = ''); }, 500);
+    }
+
+    // ---------- Trocar senha ----------
+    function abrirTrocarSenha(obrigatorio, depois) {
+        document.querySelectorAll('.modal-senha').forEach(e => e.remove());
+        const m = document.createElement('div'); m.className = 'modal-senha tela-login no-print';
+        m.innerHTML = `<div class="login-card">
+            <div class="login-titulo" style="font-size:1.1rem;">🔑 ${obrigatorio ? 'Defina a sua senha' : 'Trocar senha'}</div>
+            ${obrigatorio ? '<div class="login-aviso">Primeiro acesso ou senha redefinida pelo MASTER: crie uma senha pessoal para continuar.</div>' : ''}
+            <label>Senha atual</label><input id="ts-atual" type="password" autocomplete="current-password">
+            <label>Nova senha</label><input id="ts-nova" type="password" autocomplete="new-password" placeholder="mínimo 6, com letras e números">
+            <label>Repita a nova senha</label><input id="ts-rep" type="password" autocomplete="new-password">
+            <div id="ts-msg" class="login-msg"></div>
+            <button class="login-btn" id="ts-btn">Salvar nova senha</button>
+            ${obrigatorio ? '' : '<button class="login-btn login-btn-sec" onclick="this.closest(\'.modal-senha\').remove()">Cancelar</button>'}
+        </div>`;
+        document.body.appendChild(m);
+        const g = id => m.querySelector(id), msg = g('#ts-msg');
+        g('#ts-btn').onclick = async () => {
+            if (g('#ts-nova').value !== g('#ts-rep').value) { msg.textContent = 'As duas novas senhas não conferem.'; return; }
+            try {
+                const r = await authChamar('auth_trocar_senha', { senhaAtual: g('#ts-atual').value, novaSenha: g('#ts-nova').value });
+                if (!r.ok) { msg.textContent = r.erro; return; }
+                AUTH.usuario = r.usuario; authGravar(AUTH, !!localStorage.getItem(AUTH_KEY) || true);
+                m.remove(); alert('✅ Senha alterada. Os outros computadores em que você estava conectado foram desconectados.'); aplicarPermissoes();
+                if (depois) depois();
+            } catch (e) { msg.textContent = 'Sem resposta da planilha.'; }
+        };
+    }
+
+    // ---------- Menu do usuário (topo) ----------
+    function atualizarChipUsuario() {
+        let chip = document.getElementById('usuario-chip');
+        if (!chip) {
+            const nav = document.querySelector('.status-pill');
+            if (!nav) return;
+            chip = document.createElement('div'); chip.id = 'usuario-chip'; chip.className = 'usuario-chip no-print'; chip.onclick = abrirMenuUsuario;
+            nav.parentNode.insertBefore(chip, nav);
+        }
+        if (!loginObrigatorio()) { chip.innerHTML = '👤 <span>Sem login</span>'; chip.title = 'Login disponível depois de configurar a planilha Google'; return; }
+        const u = AUTH && AUTH.usuario;
+        chip.innerHTML = u ? `👤 <span>${esc(u.nome || u.login)}</span><small>${esc(u.perfil)}</small>` : '👤 <span>Entrar</span>';
+        chip.title = u ? `Conectado como ${u.login} (${u.perfil}) — clique para opções` : 'Clique para entrar';
+    }
+    function abrirMenuUsuario(ev) {
+        if (ev) ev.stopPropagation();
+        if (!loginObrigatorio()) { abrirConfigPlanilha(); return; }
+        if (!AUTH) { mostrarLogin(() => location.reload()); return; }
+        document.querySelectorAll('.menu-usuario').forEach(e => e.remove());
+        const chip = document.getElementById('usuario-chip'), r = chip.getBoundingClientRect();
+        const m = document.createElement('div'); m.className = 'menu-usuario no-print';
+        m.style.cssText = `top:${r.bottom + 6}px; right:${Math.max(8, window.innerWidth - r.right)}px;`;
+        const u = AUTH.usuario;
+        m.innerHTML = `<div class="mu-cab"><b>${esc(u.nome || u.login)}</b><br><span>${esc(u.login)} · ${esc(u.perfil)}</span></div>
+            <button onclick="abrirTrocarSenha(false)">🔑 Trocar minha senha</button>
+            ${pode('usuarios') ? '<button onclick="abrirGestaoUsuarios()">👥 Usuários e liberações</button>' : ''}
+            <button onclick="sairDoSistema()">🚪 Sair deste computador</button>`;
+        document.body.appendChild(m);
+        setTimeout(() => document.addEventListener('click', function f() { m.remove(); document.removeEventListener('click', f); }), 0);
+    }
+    async function sairDoSistema() {
+        if (!confirm('Sair deste computador?\n\nSe este for o computador SENTINELA, o Monitor para de registrar até alguém entrar de novo.')) return;
+        try { await authChamar('auth_sair', {}); } catch (e) {}
+        AUTH = null; authGravar(null); location.reload();
+    }
+
+    // ---------- Liberações aplicadas na tela ----------
+    const PERM_DAS_FUNCOES = { darCienciaEmTudo: 'ciencia', darCiencia: 'ciencia', atribuirResponsavelManual: 'ciencia', excluirSelecionados: 'excluir', abrirMotivoDevolucao: 'devolucao',
+        conectarPasta: 'pastas', conectarPastaEquipe: 'pastas', criarPastasDevolucao: 'pastas', autorizarOrganizacaoDevolvidos: 'pastas', toggleConexoes: 'pastas',
+        exportar: 'relatorios', exportarColabCsv: 'relatorios', imprimirAbaAtual: 'relatorios', imprimirRelatorio: 'relatorios', imprimirColab: 'relatorios',
+        abrirDashboardEmNovaAba: 'dashboard', removerConfigPlanilha: 'planilha', copiarLinkConfigPlanilha: 'planilha', escolherLogo: 'planilha' };
+    const _abrirConfigPlanilhaOriginal = abrirConfigPlanilha;
+    Object.keys(PERM_DAS_FUNCOES).forEach(nome => {
+        const f = window[nome]; if (typeof f !== 'function') return;
+        window[nome] = function () {
+            const p = PERM_DAS_FUNCOES[nome];
+            if (!pode(p)) { alert(`🔒 Sem liberação para: ${PERM_ROTULOS[p]}.\n\nPeça ao usuário MASTER (menu 👤 → Usuários e liberações).`); return; }
+            const r = f.apply(this, arguments);
+            if (['darCienciaEmTudo', 'darCiencia', 'excluirSelecionados', 'atribuirResponsavelManual'].includes(nome)) registrarAcao(nome, [...arguments].join(' ').slice(0, 300));
+            return r;
+        };
+    });
+    // A configuração da planilha fica liberada antes do login (é ela que permite entrar); depois, só com a liberação
+    window.abrirConfigPlanilha = function () { if (AUTH && !pode('planilha')) { alert('🔒 Sem liberação para configurar a planilha.\n\nPeça ao usuário MASTER.'); return; } return _abrirConfigPlanilhaOriginal.apply(this, arguments); };
+    function aplicarPermissoes() {
+        atualizarChipUsuario();
+        Object.keys(PERM_DAS_FUNCOES).forEach(nome => document.querySelectorAll(`[onclick^="${nome}("]`).forEach(b => {
+            if (b.closest('.tela-login')) return;
+            b.style.display = pode(PERM_DAS_FUNCOES[nome]) ? '' : 'none';
+        }));
+        const barra = document.getElementById('conexao-bar-wrapper');
+        if (barra && !pode('pastas')) barra.style.display = 'none';
+        const resumo = document.getElementById('resumo-conexoes'); if (resumo && !pode('pastas')) resumo.style.display = 'none';
+        document.body.classList.toggle('sem-ciencia', !pode('ciencia'));
+        document.body.classList.toggle('sem-excluir', !pode('excluir'));
+    }
+    async function validarSessao() {
+        if (!AUTH || !loginObrigatorio()) return;
+        try {
+            const r = await authChamar('auth_validar', {});
+            if (r.ok) { AUTH.usuario = r.usuario; authGravar(AUTH, !!localStorage.getItem(AUTH_KEY)); aplicarPermissoes(); if (r.usuario.trocarSenha) abrirTrocarSenha(true); }
+            else if (r.semSessao) { AUTH = null; authGravar(null); mostrarLogin(() => location.reload(), 'Sua sessão foi encerrada (senha trocada, usuário desativado ou 90 dias sem uso). Entre de novo.'); }
+        } catch (e) { /* sem internet: continua com a sessão salva */ }
+    }
+    // Ponto de entrada da página: entra direto com a sessão salva; só pede login se não houver sessão
+    async function iniciarComLogin() {
+        if (!loginObrigatorio()) { atualizarChipUsuario(); return iniciar(); }
+        const salvo = authLer();
+        if (salvo && salvo.sessao) {
+            AUTH = salvo; aplicarPermissoes(); await iniciar(); aplicarPermissoes();
+            validarSessao(); setInterval(validarSessao, 30 * 60000);
+            return;
+        }
+        atualizarChipUsuario();
+        mostrarLogin(async () => { await iniciar(); aplicarPermissoes(); setInterval(validarSessao, 30 * 60000); });
+    }
+
+    // ---------- Gestão de usuários (MASTER) ----------
+    async function abrirGestaoUsuarios() {
+        document.querySelectorAll('.modal-usuarios').forEach(e => e.remove());
+        const m = document.createElement('div'); m.className = 'modal-usuarios no-print';
+        m.innerHTML = `<div class="mu-caixa"><div class="mu-titulo">👥 Usuários e liberações <button class="btn btn-outline" style="float:right; padding:4px 10px;" onclick="this.closest('.modal-usuarios').remove()">Fechar</button></div><div id="mu-corpo" class="mu-corpo">Carregando…</div></div>`;
+        document.body.appendChild(m);
+        m.addEventListener('click', ev => { if (ev.target === m) m.remove(); });
+        let r;
+        try { r = await authChamar('auth_usuarios_listar', {}); } catch (e) { m.querySelector('#mu-corpo').textContent = 'Sem resposta da planilha.'; return; }
+        if (!r.ok) { m.querySelector('#mu-corpo').textContent = r.erro; return; }
+        const perfis = Object.keys(r.perfis || PERFIS_PADRAO), perms = r.permissoes || Object.keys(PERM_ROTULOS);
+        const caixas = (pref, sel) => perms.filter(p => p !== 'usuarios').map(p => `<label class="mu-perm" title="${esc(PERM_ROTULOS[p] || p)}"><input type="checkbox" data-p="${p}" ${sel.includes(p) ? 'checked' : ''}> ${esc(PERM_ROTULOS[p] || p)}</label>`).join('');
+        const linha = u => `<tr data-login="${esc(u.login)}">
+            <td><b>${esc(u.login)}</b><br><small>${u.ultimoAcesso ? 'último acesso ' + esc(u.ultimoAcesso) : 'nunca entrou'}${u.trocarSenha ? ' · troca de senha pendente' : ''}</small></td>
+            <td><input class="mu-nome" value="${esc(u.nome || '')}"></td>
+            <td><select class="mu-perfil">${perfis.map(p => `<option ${p === u.perfil ? 'selected' : ''}>${p}</option>`).join('')}</select></td>
+            <td class="mu-perms">${u.perfil === 'MASTER' ? '<i>todas</i>' : caixas('', u.perms || [])}</td>
+            <td style="text-align:center"><input type="checkbox" class="mu-ativo" ${u.ativo ? 'checked' : ''}></td>
+            <td class="mu-acoes"><button class="btn" data-a="salvar">Salvar</button><button class="btn btn-outline" data-a="reset">Redefinir senha</button><button class="btn btn-outline" data-a="sair">Desconectar</button></td></tr>`;
+        m.querySelector('#mu-corpo').innerHTML = `
+            <div class="mu-dica">Perfis: <b>MASTER</b> tudo + usuários · <b>GESTOR</b> tudo menos usuários · <b>SENTINELA</b> computador que lê as pastas · <b>OPERADOR</b> ciência e devoluções · <b>CONSULTA</b> só vê. Ao trocar o perfil, as liberações são preenchidas; depois dá para marcar/desmarcar uma a uma. Alterações valem em até 1 minuto.</div>
+            <table class="mu-tab"><thead><tr><th>Login</th><th>Nome</th><th>Perfil</th><th>Liberações</th><th>Ativo</th><th></th></tr></thead><tbody>${r.usuarios.map(linha).join('')}</tbody></table>
+            <div class="mu-novo"><b>➕ Novo usuário</b>
+                <input id="mn-login" placeholder="login (ex.: daniela)" autocapitalize="none"><input id="mn-nome" placeholder="Nome">
+                <select id="mn-perfil">${perfis.filter(p => p !== 'MASTER').map(p => `<option ${p === 'OPERADOR' ? 'selected' : ''}>${p}</option>`).join('')}</select>
+                <input id="mn-senha" placeholder="senha inicial (letras e números)"><button class="btn" id="mn-criar">Criar</button>
+                <div class="mu-dica">A pessoa entra com a senha inicial e o sistema obriga a criar uma senha pessoal.</div></div>`;
+        const corpo = m.querySelector('#mu-corpo');
+        corpo.querySelectorAll('.mu-perfil').forEach(sel => sel.onchange = () => {
+            const td = sel.closest('tr').querySelector('.mu-perms');
+            td.innerHTML = sel.value === 'MASTER' ? '<i>todas</i>' : caixas('', (r.perfis || PERFIS_PADRAO)[sel.value] || []);
+        });
+        corpo.querySelectorAll('.mu-acoes button').forEach(b => b.onclick = async () => {
+            const tr = b.closest('tr'), login = tr.dataset.login, a = b.dataset.a;
+            let res;
+            if (a === 'salvar') res = await authChamar('auth_usuario_salvar', { usuario: { login, nome: tr.querySelector('.mu-nome').value, perfil: tr.querySelector('.mu-perfil').value, ativo: tr.querySelector('.mu-ativo').checked, perms: [...tr.querySelectorAll('.mu-perms input:checked')].map(i => i.dataset.p) } });
+            if (a === 'reset') { const s = prompt(`Senha temporária para ${login} (mínimo 6, letras e números). A pessoa será obrigada a trocar ao entrar:`); if (!s) return; res = await authChamar('auth_usuario_resetar', { login, senhaTemp: s }); }
+            if (a === 'sair') { if (!confirm(`Desconectar ${login} de todos os computadores?`)) return; res = await authChamar('auth_sessoes_encerrar', { login }); }
+            alert(res && res.ok ? '✅ Feito.' : '❌ ' + ((res && res.erro) || 'Falhou'));
+            if (res && res.ok && a === 'salvar') abrirGestaoUsuarios();
+        });
+        corpo.querySelector('#mn-criar').onclick = async () => {
+            const perfil = corpo.querySelector('#mn-perfil').value;
+            const res = await authChamar('auth_usuario_salvar', { usuario: { login: corpo.querySelector('#mn-login').value, nome: corpo.querySelector('#mn-nome').value, perfil, ativo: true, perms: (r.perfis || PERFIS_PADRAO)[perfil] || [] }, novaSenha: corpo.querySelector('#mn-senha').value });
+            if (!res.ok) { alert('❌ ' + res.erro); return; }
+            alert('✅ Usuário criado. Passe o login e a senha inicial para a pessoa.'); abrirGestaoUsuarios();
+        };
     }
 </script>
 </body>
