@@ -1686,7 +1686,7 @@
         const achado = PASTAS_MOTIVO.find(p => limpo(p[0]) === k || limpo(p[1]) === k);
         return achado ? achado[1] : String(nomePasta).replace(/^\d+\s*[-–.)]?\s*/, '').trim();
     }
-    let _cacheDevolvidos = { handle: null, verificadoEm: 0 };
+    let _cacheDevolvidos = { handle: null, verificadoEm: 0 }, _avisoDevolvidosSumiu = false;
     // Subpastas de ARQUIVO MORTO dentro de _DEVOLVIDOS: o Monitor guarda ali o PDF antigo (nunca apaga).
     // O que está nelas já foi resolvido e NÃO conta como "aguardando correção".
     const PASTA_SUBSTITUIDOS = '_SUBSTITUIDOS', PASTA_CANCELADOS = '_CANCELADOS';
@@ -1710,7 +1710,12 @@
         // 1) Pasta conectada pelo botão "↩️ Devolvidos" (pode estar em qualquer lugar da rede)
         if (conexoes["DEVOLVIDOS"]) {
             try { return await lerPastaDevolvidos(conexoes["DEVOLVIDOS"], mapa); }
-            catch (e) { console.warn('Falha ao ler a pasta Devolvidos — ciclo ignorado para devoluções:', e); return null; }
+            catch (e) {
+                // Pasta conectada não existe mais (renomeada/movida): procura a de dentro da Origem em vez de parar tudo
+                if (!(e && e.name === 'NotFoundError') || !rootHandle) { console.warn('Falha ao ler a pasta Devolvidos — ciclo ignorado para devoluções:', e); return null; }
+                if (!_avisoDevolvidosSumiu) { _avisoDevolvidosSumiu = true; console.warn('A pasta ↩️ Devolvidos conectada não existe mais — usando a pasta de devolvidos dentro da Origem. Reconecte o botão ↩️ Devolvidos.'); }
+                mapa.clear();
+            }
         }
         // 2) Sem conexão própria: procura uma pasta "_DEVOLVIDOS" dentro da Origem
         if (!rootHandle) return mapa;
@@ -1760,7 +1765,22 @@
         return true;
     }
     const _soDig = v => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
-    const _lancadosRemotos = { mapa: {}, em: 0, chaves: '' }, _chavesConsultar = new Set();
+    const _lancadosRemotos = { mapa: {}, em: 0, chaves: '', datas: {} }, _chavesConsultar = new Set();
+    // ===== DUPLICIDADE DE DOCUMENTO (mesmo CNPJ + NF em mais de um arquivo) =====
+    let _idxDup = {};
+    function montarIndiceDuplicidade() {
+        const idx = {};
+        for (const n in db) { const it = db[n]; if (!it || it.apagado) continue; const i = infoDoItem(n); if (!i.cnpj || !i.nf) continue; const k = _soDig(i.cnpj) + '|' + _soDig(i.nf); (idx[k] = idx[k] || []).push(n); }
+        _idxDup = idx;
+    }
+    // Outros arquivos da MESMA nota: neste computador + já lançados na planilha (qualquer data)
+    function duplicatasDe(n) {
+        const i = infoDoItem(n); if (!i.cnpj || !i.nf) return [];
+        const k = _soDig(i.cnpj) + '|' + _soDig(i.nf), vistos = new Set([n]), out = [];
+        (_idxDup[k] || []).forEach(o => { if (!vistos.has(o)) { vistos.add(o); out.push({ nome: o, lancado: db[o].a === 'CONCILIADO', data: db[o].d || '', onde: db[o].f || '' }); } });
+        (_lancadosRemotos.mapa[k] || []).forEach(o => { if (!vistos.has(o) && !(db[o] && db[o].apagado)) { vistos.add(o); out.push({ nome: o, lancado: true, data: _lancadosRemotos.datas[o] || '', onde: 'planilha' }); } });
+        return out;
+    }
     async function consultarLancadosRemotos() {
         if (!GS_CONFIG.ativo || !GS_CONFIG.webAppUrl || !_chavesConsultar.size) return;
         const chaves = [..._chavesConsultar].sort().join(',');
@@ -1771,7 +1791,7 @@
             const r = await fetch(`${GS_CONFIG.webAppUrl}?token=${encodeURIComponent(GS_CONFIG.token)}&fonte=lancados_nf&chaves=${encodeURIComponent(chaves)}`);
             const j = await r.json();
             if (!j.ok) return;
-            const m = {}; (j.registros || []).forEach(x => (m[x.chave] = m[x.chave] || []).push(x.arquivo));
+            const m = {}; (j.registros || []).forEach(x => { (m[x.chave] = m[x.chave] || []).push(x.arquivo); _lancadosRemotos.datas[x.arquivo] = x.data || ''; });
             _lancadosRemotos.mapa = m;
         } catch (e) { console.warn('Consulta de notas já lançadas na planilha falhou:', e); }
     }
@@ -1891,23 +1911,46 @@
     // nome contém "DEVOLVID" (aproveita a que já existe); só cria "_DEVOLVIDOS" se não houver nenhuma.
     // Dentro dela cria _SUBSTITUIDOS e _CANCELADOS e já deixa a GRAVAÇÃO autorizada (o clique é o gesto exigido).
     async function criarPastasDevolucao() {
+        const existe = async h => { try { await h.values().next(); return true; } catch (e) { return false; } };
+        let etapa = '';
         try {
-            let dev = conexoes["DEVOLVIDOS"] || null, onde = '';
-            if (dev) onde = dev.name;
-            else {
+            let dev = null, onde = '';
+            // 1) Pasta ↩️ Devolvidos conectada — só vale se ainda existir (pasta movida/renomeada = conexão velha)
+            if (conexoes["DEVOLVIDOS"]) {
+                etapa = 'abrir a pasta ↩️ Devolvidos conectada';
+                if (await existe(conexoes["DEVOLVIDOS"])) { dev = conexoes["DEVOLVIDOS"]; onde = dev.name; }
+                else console.warn('Conexão ↩️ Devolvidos aponta para uma pasta que não existe mais — tentando pela Origem.');
+            }
+            // 2) Subpasta da Origem com "DEVOLVID" no nome (ou cria _DEVOLVIDOS)
+            if (!dev) {
                 const root = conexoes["ORIGEM"];
                 if (!root) { alert('Conecte primeiro a pasta Origem (ou a pasta ↩️ Devolvidos).'); return; }
+                etapa = 'abrir a pasta Origem';
+                if (!(await existe(root))) { alert('A pasta Origem conectada não foi encontrada (foi renomeada, movida ou a rede caiu).\n\nClique em "Origem" na faixa de conexões, escolha a pasta de novo e depois clique em "Preparar Devolvidos".'); return; }
+                etapa = 'pedir permissão de gravação na Origem';
                 if ((await root.requestPermission({ mode: 'readwrite' })) !== 'granted') { alert('Permissão de gravação negada. Nada foi criado.'); return; }
+                etapa = 'procurar a pasta de devolvidos dentro da Origem';
                 for await (const h of root.values()) if (h.kind === 'directory' && normalizarNome(h.name).includes('DEVOLVID')) { dev = h; break; }
+                etapa = 'criar a pasta _DEVOLVIDOS na Origem';
                 if (!dev) dev = await root.getDirectoryHandle(PASTA_DEVOLVIDOS, { create: true });
                 onde = root.name + '\\' + dev.name;
                 _cacheDevolvidos = { handle: dev, verificadoEm: Date.now() };
             }
+            etapa = 'pedir permissão de gravação em ' + dev.name;
             if ((await dev.requestPermission({ mode: 'readwrite' })) !== 'granted') { alert('Permissão de gravação negada. Nada foi criado.'); return; }
-            for (const sp of [PASTA_SUBSTITUIDOS, PASTA_CANCELADOS]) await dev.getDirectoryHandle(sp, { create: true });
+            for (const sp of [PASTA_SUBSTITUIDOS, PASTA_CANCELADOS]) {
+                etapa = `criar/abrir a subpasta ${sp} dentro de ${dev.name}`;
+                let ok = false;
+                for await (const h of dev.values()) if (h.kind === 'directory' && normalizarNome(h.name) === normalizarNome(sp)) { ok = true; break; }
+                if (!ok) await dev.getDirectoryHandle(sp, { create: true });
+            }
             _baseDevolvidos = dev; _falhasOrganizar = {}; _avisoOrganizarFechado = false;
-            alert(`Pronto: ${onde}\n   ├─ ${PASTA_SUBSTITUIDOS}\n   └─ ${PASTA_CANCELADOS}\n\nEste computador já está autorizado a mover os PDFs antigos sozinho.\n\nOriente a equipe:\n• Quem lança: ao achar divergência, mover o PDF para ${dev.name} (solto, sem criar outras subpastas).\n• Quem baixou do Asten: corrigir e mover de volta para a Origem — OU, se o fornecedor reemitiu a nota, colocar a nota nova na Origem e deixar a antiga em ${dev.name} (NÃO apagar).\n• Nota cancelada: clicar no chip ↩️ → "Encerrar sem substituto".`);
-        } catch (e) { alert('Não foi possível preparar as pastas: ' + (e && e.message || e)); }
+            alert(`Pronto: ${onde}\n   ├─ ${PASTA_SUBSTITUIDOS}\n   └─ ${PASTA_CANCELADOS}\n\nEste computador já está autorizado a mover os PDFs resolvidos sozinho.\n\nOriente a equipe:\n• Quem lança: ao achar divergência, mover o PDF para ${dev.name} (solto, sem criar outras subpastas).\n• Quem baixou do Asten: corrigir e mover de volta para a Origem — OU colocar a nota nova na Origem e deixar a antiga em ${dev.name} (NÃO apagar).\n• Nota cancelada: chip ↩️ → "Encerrar sem substituto".`);
+        } catch (e) {
+            const nf = e && e.name === 'NotFoundError';
+            alert(`Não foi possível ${etapa || 'preparar as pastas'}.\n\n${nf ? 'A pasta não foi encontrada na rede: provavelmente ela foi renomeada ou movida depois de conectada, ou a conexão de rede caiu.\n\nO que fazer: clique em "↩️ Devolvidos" na faixa de conexões e escolha de novo a pasta de devolvidos (a que contém _SUBSTITUIDOS e _CANCELADOS). Depois clique em "Preparar Devolvidos".' : 'Detalhe: ' + (e && e.message || e)}`);
+            if (nf && etapa.includes('Devolvidos conectada')) conexoes["DEVOLVIDOS"] = null;
+        }
     }
 
     function atualizarFluxoComHistorico(item, novoFluxo, agora, respAtual) {
@@ -4720,7 +4763,10 @@
             });
         });
 
-        const avisosDup = (info) => { const out = []; const q = contArq[k(info.cnpj, info.nf)]; if (q > 1) out.push(`Mesma NF+CNPJ em ${q} arquivos — possível duplicidade de documento`); return out; };
+        const avisosDup = (info) => { const out = []; const q = contArq[k(info.cnpj, info.nf)]; if (q > 1) out.push(`Mesma NF+CNPJ em ${q} arquivos — possível duplicidade de documento`);
+            const rem = (_lancadosRemotos.mapa[_soDig(info.cnpj) + '|' + _soDig(info.nf)] || []).filter(o => !db[o] || (!db[o].apagado && infoDoItem(o) && o !== info._nome));
+            if (!q || q < 2) { const outros = rem.filter(o => !db[o]); if (outros.length) out.push(`Mesma NF+CNPJ já lançada na planilha em outro arquivo (${outros.map(o => (_lancadosRemotos.datas[o] || '?')).join(', ')}) — possível pagamento em duplicidade`); }
+            return out; };
 
         lancados.forEach(c => {
             const base = { arquivo: c.n, nf: c.info.nf, fornecedor: c.info.fornecedor || '', cnpj: c.info.cnpj, valorBruto: c.info.valorBruto, valorLiquido: c.info.valorLiquido, resp: c.reg.resp || '-' };
@@ -5319,6 +5365,8 @@
                     }
                   }
                 }
+                // Notas ainda não lançadas: confere na planilha se a mesma NF+CNPJ já foi lançada (outro dia/arquivo)
+                for (const n in db) { const it = db[n]; if (!it || it.apagado || it.a === 'CONCILIADO' || !it.aoVivo) continue; const i = infoDoItem(n); if (i.cnpj && i.nf) _chavesConsultar.add(i.cnpj + '|' + i.nf); }
                 try { if (await organizarDevolvidos(devolvidosMap)) houveMudanca = true; } catch (eOrg) { console.warn('Organização de _DEVOLVIDOS:', eOrg); }
             } else if (conexoes["ORIGEM"] || conexoes["DEVOLVIDOS"]) {
                 // Mesmo olhando uma data passada, o sentinela continua arquivando o que já foi resolvido em _DEVOLVIDOS
@@ -5492,10 +5540,17 @@
         if (!info.cnpj || !info.nf) out.push(chip('alerta', 'Nome ✗', 'Nome fora do padrão: não foi possível extrair NF/CNPJ'));
         else if (!validarDocumento(info.cnpj)) out.push(chip('erro', 'CNPJ ✗', `CNPJ/CPF ${info.cnpj} com dígito verificador inválido`));
         else out.push(chip('ok', 'Dados ✓', `NF ${info.nf} · CNPJ ${info.cnpj}`));
+        const dups = duplicatasDe(n);
+        if (dups.length) {
+            const jaLancada = dups.some(d => d.lancado) && db[n] && db[n].a !== 'CONCILIADO';
+            out.push(chip('erro', jaLancada ? '🔁 Já lançada' : '🔁 Duplicado', (jaLancada ? 'ATENÇÃO: esta NF já foi LANÇADA em outro arquivo — não lançar de novo (risco de pagamento em duplicidade). ' : 'Mesma NF + CNPJ em mais de um arquivo. ') +
+                dups.map(d => `${d.nome} — ${d.lancado ? 'lançado' : 'pendente'}${d.data ? ' em ' + d.data : ''}${d.onde && d.onde !== 'planilha' ? ' (' + d.onde + ')' : ''}`).join(' | ')));
+        }
         return `<div class="conf-chips">${out.join('')}</div>`;
     }
 
     function atualizarTela() {
+        try { montarIndiceDuplicidade(); } catch (e) {}
         const corpo = document.getElementById('tabela-corpo');
         const now = Date.now();
         let ok = 0, p = 0;
