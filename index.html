@@ -63,6 +63,9 @@
         .pp-faixa.pp-ativa { border-color:currentColor; font-weight:800; }
         .pp-resp { font-size:0.62rem; color:#5B5C65; }
         .pp-rodape { font-size:0.66rem; color:#5B5C65; margin-top:6px; }
+        .painel-pend.pp-recolhido { padding:5px 12px; }
+        .painel-pend.pp-recolhido .pp-cab { margin-bottom:0; }
+        .painel-pend.pp-recolhido .pp-grade, .painel-pend.pp-recolhido .pp-rodape { display:none; }
         .pp-vazio { font-size:0.8rem; color:#00995D; font-weight:700; padding:6px; }
         .equipe-card { background: var(--white); padding: 4px 12px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.68rem; font-weight: 700; color: #64748b; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
         .caixa-filtro { cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; user-select: none; }
@@ -694,6 +697,16 @@
     }
     function fmtDataHoraCurta(ms) { const d = new Date(ms); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
 
+    function ppOculto() {
+        if (typeof window._ppOcultoMem === 'boolean') return window._ppOcultoMem;
+        try { window._ppOcultoMem = localStorage.getItem('monitor_painel_pend_oculto') === '1'; } catch (e) { window._ppOcultoMem = false; }
+        return window._ppOcultoMem;
+    }
+    function alternarPainelPendencias() {
+        window._ppOcultoMem = !ppOculto();
+        try { localStorage.setItem('monitor_painel_pend_oculto', window._ppOcultoMem ? '1' : '0'); } catch (e) {}
+        renderPainelPendencias();
+    }
     function renderPainelPendencias() {
         const el = document.getElementById('painel-pendencias');
         if (!el) return;
@@ -736,7 +749,10 @@
         const cardDup = copias ? `<div class="pp-card${filtroPendGrupo === 'DUPLICADA' ? ' pp-ativa' : ''}" style="--pp-cor:#C62828" onclick="filtrarPendencias('DUPLICADA')" title="Notas já lançadas em outro arquivo cuja cópia continua na Origem ou na pasta de alguém — apagar a cópia para não lançar duas vezes">
                 <div class="pp-topo"><span>🔁 Cópia duplicada na pasta</span><span class="pp-qtd">${copias}</span></div><div class="pp-resp">Já lançada em outro arquivo — apagar a cópia</div></div>` : '';
         const hoje = (nomeDifHoje || dupHoje) ? ` · hoje fechou sozinho: ${nomeDifHoje ? nomeDifHoje + ' com nome diferente' : ''}${nomeDifHoje && dupHoje ? ', ' : ''}${dupHoje ? dupHoje + ' duplicada(s)' : ''}` : '';
-        el.innerHTML = `<div class="pp-cab"><span class="pp-titulo">Pendências de todas as datas: <b>${total}</b>${hoje}</span>
+        const recolhido = ppOculto();
+        el.classList.toggle('pp-recolhido', recolhido);
+        el.innerHTML = `<div class="pp-cab"><span class="pp-titulo">Pendências de todas as datas: <b>${total}</b>${hoje}${recolhido && copias ? ` · <span style="color:#C62828;">🔁 ${copias} cópia(s) duplicada(s)</span>` : ''}</span>
+            <button class="btn btn-outline pp-limpar" onclick="alternarPainelPendencias()" title="${recolhido ? 'Mostrar os cards de pendências' : 'Ocultar os cards de pendências (fica só esta linha)'}">${recolhido ? '▼ Mostrar cards' : '▲ Ocultar cards'}</button>
             ${(filtroPendGrupo || filtroPendIdade) ? '<button class="btn btn-outline pp-limpar" onclick="filtroPendGrupo=null;filtroPendIdade=null;atualizarTela()">✕ tirar filtro</button>' : ''}
             ${podeVarrerPendencias() && !va.emAndamento ? '<button class="btn btn-outline pp-limpar" onclick="executarVarreduraPendencias(\'manual\')" title="Abre as pastas antigas de Lançados e fecha o que já foi lançado">🔎 Varrer agora</button>' : ''}</div>
             <div class="pp-grade">${cards}${cardDup}${!total && !copias ? '<div class="pp-vazio">🎉 Nenhuma pendência.</div>' : ''}</div>
