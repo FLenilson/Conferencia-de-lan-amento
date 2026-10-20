@@ -46,6 +46,24 @@
         .card-val { font-family: 'Poppins', sans-serif; font-size: 1.4rem; font-weight: 800; }
 
         .equipe-stats { display: flex; gap: 6px; justify-content: center; margin-bottom: 6px; flex-wrap: wrap; }
+        .painel-pend { background:#fff; border:1px solid #d7e6df; border-left:5px solid #00995D; border-radius:10px; padding:8px 12px; margin-bottom:8px; }
+        .pp-cab { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
+        .pp-titulo { font-family:'Poppins',sans-serif; font-size:0.8rem; color:#0A5F55; flex:1; }
+        .pp-limpar { padding:3px 10px !important; font-size:0.7rem !important; }
+        .pp-grade { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:8px; }
+        .pp-card { border:1px solid #e2e8f0; border-top:4px solid var(--pp-cor); border-radius:8px; padding:6px 8px; cursor:pointer; background:#fbfdfc; transition:box-shadow .15s; }
+        .pp-card:hover { box-shadow:0 2px 8px rgba(10,95,85,.15); }
+        .pp-card.pp-ativa { background:#E6F4EE; box-shadow:0 0 0 2px var(--pp-cor) inset; }
+        .pp-topo { display:flex; justify-content:space-between; align-items:center; font-weight:800; font-size:0.74rem; color:#1F2933; }
+        .pp-qtd { font-family:'Poppins',sans-serif; font-size:1.15rem; color:var(--pp-cor); }
+        .pp-faixas { display:flex; gap:4px; flex-wrap:wrap; margin:4px 0 2px; }
+        .pp-faixa { font-size:0.62rem; border-radius:10px; padding:1px 7px; border:1px solid transparent; cursor:pointer; }
+        .pp-f0 { background:#E6F4EE; color:#0A5F55; } .pp-f1-3 { background:#F3F8E3; color:#4f6b10; }
+        .pp-f3-7 { background:#FFF4D6; color:#8a6d00; } .pp-f7m { background:#FDECEA; color:#C62828; }
+        .pp-faixa.pp-ativa { border-color:currentColor; font-weight:800; }
+        .pp-resp { font-size:0.62rem; color:#5B5C65; }
+        .pp-rodape { font-size:0.66rem; color:#5B5C65; margin-top:6px; }
+        .pp-vazio { font-size:0.8rem; color:#00995D; font-weight:700; padding:6px; }
         .equipe-card { background: var(--white); padding: 4px 12px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.68rem; font-weight: 700; color: #64748b; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
         .caixa-filtro { cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; user-select: none; }
         .caixa-filtro:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.10); }
@@ -207,7 +225,7 @@
         .mu-acoes { white-space:nowrap; } .mu-acoes .btn { padding:4px 8px; font-size:.72rem; margin:1px; } .mu-acoes .btn:not(.btn-outline) { background:#00995D; color:#fff; border:none; }
         .mu-novo { margin-top:12px; padding:10px; border:1px dashed #9ED3B9; border-radius:10px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; } .mu-novo .btn { background:#00995D; color:#fff; border:none; }
         body.sem-ciencia .btn-ciencia, body.sem-ciencia [onclick^="atribuirResponsavelManual("], body.sem-excluir .chk-item, body.sem-excluir #checkAll { display:none !important; }
-        @media print { .usuario-chip, .menu-usuario, .tela-login, .modal-usuarios { display:none !important; } }
+        @media print { .usuario-chip, .menu-usuario, .tela-login, .modal-usuarios, .painel-pend { display:none !important; } }
     </style>
 </head>
 <body onload="iniciarComLogin()">
@@ -266,6 +284,9 @@
 	<div class="equipe-card caixa-filtro" id="card-devolvidos" onclick="aplicarFiltroCaixa('devol','1')" title="Documentos que a colaboradora devolveu para a Origem por divergência na conferência" style="display:none; border-color:#F47920; background:#FFF3E8; color:#B4500F;">↩️ Devolvidos à Origem <span id="qtd-DEVOLVIDOS">0</span></div>
 
     </div>
+
+    <!-- PAINEL DE PENDÊNCIAS POR TIPO E IDADE (todas as datas) -->
+    <div id="painel-pendencias" class="painel-pend" style="display:none;"></div>
 
     <div class="toolbar" id="toolbar-principal">
         <button id="btn-mostrar-toolbar" onclick="alternarToolbar()" title="Mostrar a barra de ferramentas">▼ Mostrar barra de ferramentas</button>
@@ -495,14 +516,21 @@
     let filtroDevol = false;  // true = só documentos que voltaram para a Origem
     let filtroErro = false;   // true = mostra só itens com erro de leitura isolado
 
+    let filtroPendGrupo = null; // null | grupo do painel de pendências (ORIGEM, COLAB, ...)
+    let filtroPendIdade = null; // null | faixa de idade em dias úteis ('0', '1-3', '3-7', '7+')
+
     function getChavesBase() {
         const dataFiltro = getDataSelecionada();
+        // Filtro "cópias duplicadas": itens fechados (CONCILIADO) mas com a cópia ainda numa pasta
+        if (filtroPendGrupo === 'DUPLICADA') return Object.keys(db).filter(n => !db[n].apagado && db[n].fechadoPor === 'DUPLICADA' && db[n].copiaPresente);
         return Object.keys(db).filter(n => !db[n].apagado && (modoPendentesGlobais ? db[n].a !== "CONCILIADO" : db[n].d === dataFiltro));
     }
 
     function getChavesFiltradas() {
         return getChavesBase().filter(n => {
             const r = db[n];
+            if (filtroPendGrupo && filtroPendGrupo !== 'DUPLICADA' && (r.a === 'CONCILIADO' || grupoPendencia(n) !== filtroPendGrupo)) return false;
+            if (filtroPendIdade && (r.a === 'CONCILIADO' || faixaIdade(n) !== filtroPendIdade)) return false;
             if (filtroStatus === 'CONCILIADO' && r.a !== 'CONCILIADO') return false;
             if (filtroStatus === 'ABERTO' && r.a === 'CONCILIADO') return false;
             if (filtroTipo && r.t !== filtroTipo) return false;
@@ -617,7 +645,102 @@
 
     function limparFiltrosCaixa() {
         filtroStatus = null; filtroTipo = null; filtroResp = null; filtroErro = false; filtroDevol = false;
+        filtroPendGrupo = null; filtroPendIdade = null;
         atualizarTela();
+    }
+
+    // ===== PAINEL DE PENDÊNCIAS POR TIPO E IDADE =====
+    const GRUPOS_PEND = [
+        { id: 'ORIGEM', icone: '📥', titulo: 'Na Origem', dica: 'Baixado e ninguém pegou ainda', cor: '#00995D' },
+        { id: 'COLAB', icone: '👤', titulo: 'Com a colaboradora', dica: 'Pego por alguém e ainda não lançado', cor: '#0A5F55' },
+        { id: 'RECORTADO', icone: '✂️', titulo: 'Recortado', dica: 'Saiu da pasta e não chegou em Lançados — localizar o arquivo', cor: '#C62828' },
+        { id: 'DEVOLVIDO', icone: '↩️', titulo: 'Devolvido', dica: 'Aguardando correção ou nota substituta de quem baixou', cor: '#F47920' },
+        { id: 'SOLUS', icone: '📤', titulo: 'No Solus, sem mover', dica: 'Já lançado no Solus, mas o PDF não foi para Lançados', cor: '#411564' }
+    ];
+    const FAIXAS_IDADE = [
+        { id: '0', rot: '< 1 dia' }, { id: '1-3', rot: '1–3 d' }, { id: '3-7', rot: '3–7 d' }, { id: '7+', rot: '> 7 d' }
+    ];
+    function grupoPendencia(n) {
+        const r = db[n]; if (!r || r.a === 'CONCILIADO') return null;
+        const ult = (r.devolucoes || [])[(r.devolucoes || []).length - 1];
+        if (r.naPastaDevolvidos || r.aguardandoSubst || (ult && !ult.corrigidoEm && !ult.cancelado && r.f === 'NA ORIGEM')) return 'DEVOLVIDO';
+        const cs = _confSolusPorArquivo[n];
+        if (cs && cs.status === 'LANCADO_SEM_MOVER') return 'SOLUS';
+        const f = String(r.f || '');
+        if (f.includes('RECORTADO')) return 'RECORTADO';
+        if (f.startsWith('COM ')) return 'COLAB';
+        return 'ORIGEM';
+    }
+    function tsEntradaItem(r) {
+        if (r.ts_in) return r.ts_in;
+        const p = String(r.d_entrada || r.d || '').split('/');
+        if (p.length === 3) { const t = new Date(+p[2], +p[1] - 1, +p[0], 8).getTime(); if (!isNaN(t)) return t; }
+        return null;
+    }
+    function diasUteisParado(n) {
+        const r = db[n]; const ref = r && (r.ts_colab || tsEntradaItem(r));
+        return ref ? msUteis(ref, Date.now()) / MS_DIA_UTIL : 0;
+    }
+    function faixaIdade(n) {
+        const d = diasUteisParado(n);
+        return d < 1 ? '0' : d < 3 ? '1-3' : d < 7 ? '3-7' : '7+';
+    }
+    function filtrarPendencias(grupo, faixa) {
+        const mesmo = filtroPendGrupo === grupo && filtroPendIdade === (faixa || null);
+        filtroPendGrupo = mesmo ? null : grupo;
+        filtroPendIdade = mesmo ? null : (faixa || null);
+        if (filtroPendGrupo && filtroPendGrupo !== 'DUPLICADA' && !modoPendentesGlobais) { alternarPendentes(); return; } // pendências de todas as datas
+        atualizarTela();
+    }
+    function fmtDataHoraCurta(ms) { const d = new Date(ms); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+
+    function renderPainelPendencias() {
+        const el = document.getElementById('painel-pendencias');
+        if (!el) return;
+        const grupos = {}; GRUPOS_PEND.forEach(g => { grupos[g.id] = { total: 0, faixas: { '0': 0, '1-3': 0, '3-7': 0, '7+': 0 }, resp: {}, maisAntigo: 0 }; });
+        let total = 0, copias = 0, nomeDifHoje = 0, dupHoje = 0;
+        const iniHoje = new Date(); iniHoje.setHours(0, 0, 0, 0);
+        for (const n in db) {
+            const r = db[n]; if (!r || r.apagado) continue;
+            if (r.fechadoPor === 'DUPLICADA') { if (r.copiaPresente) copias++; if (r.resolvidoAutoEm >= iniHoje.getTime()) dupHoje++; continue; }
+            if (r.lancadoComNomeDiferente && r.resolvidoAutoEm >= iniHoje.getTime()) nomeDifHoje++;
+            if (r.a === 'CONCILIADO') continue;
+            const g = grupoPendencia(n); if (!g) continue;
+            const G = grupos[g], dias = diasUteisParado(n);
+            total++; G.total++; G.faixas[faixaIdade(n)]++;
+            if (dias > G.maisAntigo) G.maisAntigo = dias;
+            const quem = r.resp && r.resp !== '-' ? r.resp : 'sem responsável';
+            G.resp[quem] = (G.resp[quem] || 0) + 1;
+        }
+        const va = _varreduraAuto;
+        let linhaVarredura = '';
+        if (va.emAndamento) linhaVarredura = '⏳ Varrendo pendências nas pastas antigas de Lançados...';
+        else if (va.ultima) {
+            const prox = podeVarrerPendencias() ? ` · próxima automática ~${new Date(va.ultima + VARREDURA_INTERVALO_MS).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} (no expediente)` : '';
+            linhaVarredura = va.erro ? `⚠️ Última varredura (${fmtDataHoraCurta(va.ultima)}) falhou: ${esc(va.erro)}`
+                : `🔎 Última varredura ${esc(va.origem || '')} em ${fmtDataHoraCurta(va.ultima)}: ${va.dias} dia(s) de Lançados, ${va.arquivos} arquivo(s) · resolvidas <b>${va.resolvidas}</b>${va.nomeDif ? ` (${va.nomeDif} com nome diferente)` : ''}${va.dup ? ` · ${va.dup} duplicada(s)` : ''}${prox}`;
+        } else linhaVarredura = podeVarrerPendencias() ? '🔎 A varredura automática roda ao abrir e a cada 2 h no expediente.' : '👁️ Este computador só consulta: a resolução acontece no computador sentinela (com a pasta Lançados conectada).';
+        if (!total && !copias && !va.ultima && !va.emAndamento) { el.style.display = 'none'; return; }
+        el.style.display = '';
+        const cards = GRUPOS_PEND.map(g => {
+            const G = grupos[g.id]; if (!G.total) return '';
+            const ativo = filtroPendGrupo === g.id;
+            const topResp = Object.entries(G.resp).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${esc(k.charAt(0) + k.slice(1).toLowerCase())} ${v}`).join(' · ');
+            const faixas = FAIXAS_IDADE.map(f => { const q = G.faixas[f.id]; if (!q) return ''; const at = ativo && filtroPendIdade === f.id;
+                return `<span class="pp-faixa pp-f${f.id.replace('+', 'm')}${at ? ' pp-ativa' : ''}" title="${q} parado(s) ${f.rot} úteis — clique para filtrar" onclick="event.stopPropagation(); filtrarPendencias('${g.id}','${f.id}')">${f.rot}: <b>${q}</b></span>`; }).join('');
+            return `<div class="pp-card${ativo && !filtroPendIdade ? ' pp-ativa' : ''}" style="--pp-cor:${g.cor}" onclick="filtrarPendencias('${g.id}')" title="${esc(g.dica)} — clique para filtrar">
+                <div class="pp-topo"><span>${g.icone} ${g.titulo}</span><span class="pp-qtd">${G.total}</span></div>
+                <div class="pp-faixas">${faixas}</div>
+                <div class="pp-resp">${topResp}${G.maisAntigo >= 1 ? ` · mais antigo ${Math.floor(G.maisAntigo)} d` : ''}</div></div>`;
+        }).join('');
+        const cardDup = copias ? `<div class="pp-card${filtroPendGrupo === 'DUPLICADA' ? ' pp-ativa' : ''}" style="--pp-cor:#C62828" onclick="filtrarPendencias('DUPLICADA')" title="Notas já lançadas em outro arquivo cuja cópia continua na Origem ou na pasta de alguém — apagar a cópia para não lançar duas vezes">
+                <div class="pp-topo"><span>🔁 Cópia duplicada na pasta</span><span class="pp-qtd">${copias}</span></div><div class="pp-resp">Já lançada em outro arquivo — apagar a cópia</div></div>` : '';
+        const hoje = (nomeDifHoje || dupHoje) ? ` · hoje fechou sozinho: ${nomeDifHoje ? nomeDifHoje + ' com nome diferente' : ''}${nomeDifHoje && dupHoje ? ', ' : ''}${dupHoje ? dupHoje + ' duplicada(s)' : ''}` : '';
+        el.innerHTML = `<div class="pp-cab"><span class="pp-titulo">Pendências de todas as datas: <b>${total}</b>${hoje}</span>
+            ${(filtroPendGrupo || filtroPendIdade) ? '<button class="btn btn-outline pp-limpar" onclick="filtroPendGrupo=null;filtroPendIdade=null;atualizarTela()">✕ tirar filtro</button>' : ''}
+            ${podeVarrerPendencias() && !va.emAndamento ? '<button class="btn btn-outline pp-limpar" onclick="executarVarreduraPendencias(\'manual\')" title="Abre as pastas antigas de Lançados e fecha o que já foi lançado">🔎 Varrer agora</button>' : ''}</div>
+            <div class="pp-grade">${cards}${cardDup}${!total && !copias ? '<div class="pp-vazio">🎉 Nenhuma pendência.</div>' : ''}</div>
+            <div class="pp-rodape">${linhaVarredura}</div>`;
     }
 
     function atualizarVisualFiltros() {
@@ -640,7 +763,7 @@
         marcar('card-sem-resp', filtroResp === '-');
         marcar('card-erro-leitura', filtroErro);
         marcar('card-devolvidos', filtroDevol);
-        const algumFiltro = !!(filtroStatus || filtroTipo || filtroResp || filtroErro || filtroDevol);
+        const algumFiltro = !!(filtroStatus || filtroTipo || filtroResp || filtroErro || filtroDevol || filtroPendGrupo || filtroPendIdade);
         const btnLimpar = document.getElementById('btn-limpar-filtro-caixa');
         if (btnLimpar) btnLimpar.style.display = algumFiltro ? 'inline-flex' : 'none';
     }
@@ -2213,7 +2336,13 @@
         try {
             atualizarIndicadorSP('aguardando');
             const url = `${GS_CONFIG.webAppUrl}?token=${encodeURIComponent(GS_CONFIG.token)}&fonte=pendentes`;
-            const resp = await fetch(url);
+            // Teto de 90 s: antes, uma resposta lenta da planilha deixava o botão preso em "Buscando pendências..."
+            const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+            const tmo = ctrl ? setTimeout(() => ctrl.abort(), 90000) : null;
+            let resp;
+            try { resp = await fetch(url, ctrl ? { signal: ctrl.signal } : undefined); }
+            catch (eF) { throw new Error(eF && eF.name === 'AbortError' ? 'A planilha demorou mais de 90 s para responder' : (eF && eF.message || String(eF))); }
+            finally { if (tmo) clearTimeout(tmo); }
             if (!resp.ok) throw new Error("Falha ao consultar pendências (" + resp.status + ")");
             const json = await resp.json();
             if (!json.ok) throw new Error(json.erro || "Erro desconhecido ao consultar pendências");
@@ -2275,10 +2404,13 @@
     // É essa data que vale para ler o metadado e registrar quando o lançamento foi concluído.
     let pastaOndeAchou = {};
 
+    // Índice NF+CNPJ -> arquivos das pastas antigas de Lançados (todos, não só os pendentes), para fechar
+    // pendências cujo PDF foi salvo em Lançados com OUTRO nome (ver resolverPorNfCnpj).
+    let _idxLancAntigos = new Map();
     async function varrerLancadosDatasDasPendencias() {
-        arquivosFinalDatasAntigas = new Set();
-        pastaOndeAchou = {};
         if (!conexoes["FINAL"]) return 0;
+        // Monta tudo em variáveis locais e só troca no fim: o ciclo de 2 s continua rodando durante a varredura
+        const achados = new Set(), ondeAchou = {}, idxNf = new Map();
 
         // Um arquivo NÃO fica guardado na pasta do dia em que entrou na Origem, e sim na pasta do dia
         // em que foi lançado — que costuma ser depois. Varrer só a data de cada pendência deixava de
@@ -2320,8 +2452,10 @@
                     pastasAbertas++;
                     for await (const h of pasta.values()) {
                         if (h.kind === 'file' && arquivoValido(h.name)) {
-                            arquivosFinalDatasAntigas.add(h.name);
-                            pastaOndeAchou[h.name] = iso; // dia em que o arquivo foi de fato arquivado
+                            achados.add(h.name);
+                            ondeAchou[h.name] = iso; // dia em que o arquivo foi de fato arquivado
+                            const k = chaveNfCnpj(h.name);
+                            if (k) { const l = idxNf.get(k) || []; l.push({ nome: h.name, iso }); idxNf.set(k, l); }
                         }
                     }
                 } catch (e) {
@@ -2329,8 +2463,141 @@
                 }
             }));
         }
-        console.log(`Varredura de datas antigas em Lançados: ${pastasAbertas} pasta(s) aberta(s), ${arquivosFinalDatasAntigas.size} arquivo(s) encontrado(s).`);
-        return arquivosFinalDatasAntigas.size;
+        arquivosFinalDatasAntigas = achados;
+        Object.assign(pastaOndeAchou, ondeAchou);
+        _idxLancAntigos = idxNf;
+        _varreduraAuto.pastas = pastasAbertas; _varreduraAuto.arquivos = achados.size; _varreduraAuto.dias = lista.length;
+        console.log(`Varredura de datas antigas em Lançados: ${pastasAbertas} pasta(s) aberta(s), ${achados.size} arquivo(s) encontrado(s).`);
+        return achados.size;
+    }
+
+    // ===== VARREDURA DE PENDÊNCIAS (manual pelo botão ou automática no sentinela) =====
+    // 1) traz da planilha todas as pendências de qualquer data; 2) abre as pastas antigas de Lançados;
+    // 3) roda um ciclo completo, que concilia pelo nome exato ou por NF+CNPJ. Automática: ao abrir o Monitor
+    // e a cada 2 h no expediente, só no computador com a pasta Lançados conectada.
+    const VARREDURA_INTERVALO_MS = 2 * 3600000;
+    const _varreduraAuto = { emAndamento: false, ultima: 0, origem: '', pastas: 0, arquivos: 0, dias: 0, resolvidas: 0, nomeDif: 0, dup: 0, pendentesDepois: null, erro: '' };
+    try { const s = JSON.parse(localStorage.getItem('monitor_varredura_pend') || 'null'); if (s && s.ultima) Object.assign(_varreduraAuto, s, { emAndamento: false }); } catch (e) {}
+    const _contResolucao = { nomeDif: 0, dup: 0 };
+    const _esperar = ms => new Promise(r => setTimeout(r, ms));
+    function contarPendentesDb() { let c = 0; for (const n in db) { const it = db[n]; if (it && !it.apagado && it.a !== 'CONCILIADO') c++; } return c; }
+    function podeVarrerPendencias() { return !!conexoes["FINAL"] && !(loginObrigatorio() && (!AUTH || !pode('pastas'))); }
+
+    async function executarVarreduraPendencias(origem, aoProgresso) {
+        if (_varreduraAuto.emAndamento) return null;
+        _varreduraAuto.emAndamento = true;
+        const passo = t => { try { aoProgresso && aoProgresso(t); } catch (e) {} renderPainelPendencias(); };
+        try {
+            passo('⏳ Buscando pendências...');
+            await carregarPendenciasGlobais();
+            if (!podeVarrerPendencias()) { _varreduraAuto.emAndamento = false; renderPainelPendencias(); return null; }
+            const antes = contarPendentesDb();
+            _contResolucao.nomeDif = 0; _contResolucao.dup = 0;
+            passo('⏳ Verificando pastas antigas...');
+            await varrerLancadosDatasDasPendencias();
+            passo('⏳ Conciliando...');
+            let guarda = 0; while (isProcessing && guarda++ < 300) await _esperar(200);
+            for (const k in _cacheBuscaSolus) delete _cacheBuscaSolus[k];
+            await processar();
+            const depois = contarPendentesDb();
+            Object.assign(_varreduraAuto, { ultima: Date.now(), origem, resolvidas: Math.max(0, antes - depois), nomeDif: _contResolucao.nomeDif, dup: _contResolucao.dup, pendentesDepois: depois, erro: '' });
+        } catch (e) {
+            console.error('Varredura de pendências:', e);
+            Object.assign(_varreduraAuto, { ultima: Date.now(), origem, erro: String(e && e.message || e) });
+        } finally {
+            _varreduraAuto.emAndamento = false;
+            try { const { emAndamento, ...salvar } = _varreduraAuto; localStorage.setItem('monitor_varredura_pend', JSON.stringify(salvar)); } catch (e) {}
+            try { atualizarTela(); } catch (e) {}
+        }
+        return _varreduraAuto;
+    }
+
+    function dentroDoExpediente(dt) {
+        if (!ehDiaUtil(dt)) return false;
+        const min = dt.getHours() * 60 + dt.getMinutes();
+        return min >= EXPEDIENTE.ini && min <= EXPEDIENTE.fim;
+    }
+    let _varreduraAgendada = false, _varreduraAoAbrirFeita = false;
+    function agendarVarreduraAutomatica() {
+        if (_varreduraAgendada) return;
+        _varreduraAgendada = true;
+        setInterval(() => {
+            if (!podeVarrerPendencias() || _varreduraAuto.emAndamento) return;
+            if (!dentroDoExpediente(new Date())) return;
+            if (Date.now() - (_varreduraAoAbrirFeita ? _varreduraAuto.ultima : 0) < VARREDURA_INTERVALO_MS) return;
+            _varreduraAoAbrirFeita = true;
+            executarVarreduraPendencias('automática');
+        }, 5 * 60000);
+    }
+    // Chamado quando o monitoramento liga (conexões restauradas ou pasta conectada agora)
+    function varreduraAoAbrir() {
+        agendarVarreduraAutomatica();
+        if (_varreduraAoAbrirFeita || !podeVarrerPendencias()) return;
+        _varreduraAoAbrirFeita = true;
+        setTimeout(() => executarVarreduraPendencias('ao abrir'), 15000); // deixa o 1º ciclo normal terminar antes
+    }
+
+    // ===== RESOLUÇÃO POR NF + CNPJ =====
+    // Antes só o nome EXATO fechava uma pendência: arquivo salvo em Lançados como "... (1).pdf" ou com o nome
+    // corrigido deixava a pendência aberta para sempre. Regra:
+    //  • a pendência sumiu das pastas e há em Lançados outro arquivo com a mesma NF+CNPJ → LANÇADA COM NOME
+    //    DIFERENTE: o registro do arquivo de Lançados herda entrada, responsável e linha do tempo; o antigo sai.
+    //  • a pendência AINDA está na Origem/colaboradora → DUPLICADA: fecha, aponta o arquivo já lançado e fica
+    //    sinalizada "cópia ainda na pasta" até alguém apagar a cópia.
+    // Fora da regra: documentos em _DEVOLVIDOS / aguardando substituto (tratados pela organização de devolvidos).
+    function resolverPorNfCnpj(filesO, filesF, filesColabs, finalHoje, dataAlvoIso, now) {
+        const idx = new Map();
+        for (const [k, l] of _idxLancAntigos) idx.set(k, l.slice());
+        (finalHoje || []).forEach(nome => { const k = chaveNfCnpj(nome); if (!k) return; const l = idx.get(k) || []; if (!l.some(x => x.nome === nome)) l.push({ nome, iso: dataAlvoIso }); idx.set(k, l); });
+        if (!idx.size) return false;
+        const presente = nome => filesO.has(nome) || Object.values(filesColabs).some(s => s && typeof s.has === 'function' && s.has(nome));
+        const usados = new Set();
+        let mudou = false;
+        for (const n of Object.keys(db)) {
+            const it = db[n];
+            if (!it || it.apagado || it.a === 'CONCILIADO' || filesF.has(n)) continue;
+            if (it.naPastaDevolvidos || it.aguardandoSubst) continue;
+            const k = chaveNfCnpj(n); if (!k) continue;
+            const cand = (idx.get(k) || []).filter(x => x.nome !== n && !(db[x.nome] && db[x.nome].apagado));
+            if (!cand.length) continue;
+            // Prefere o arquivo de Lançados que ainda não herdou outra pendência
+            const alvo = cand.find(x => !usados.has(x.nome) && !(db[x.nome] && db[x.nome].renomeadoDe)) || cand[0];
+            const dataLanc = isoParaBr(alvo.iso);
+            const ainda = presente(n);
+            const alvoOcupado = usados.has(alvo.nome) || (db[alvo.nome] && db[alvo.nome].renomeadoDe && db[alvo.nome].renomeadoDe !== n);
+            if (ainda || alvoOcupado) {
+                it.a = 'CONCILIADO'; it.ts_out = null;
+                atualizarFluxoComHistorico(it, 'DUPLICADA', now);
+                Object.assign(it, { fechadoPor: 'DUPLICADA', duplicataDe: alvo.nome, duplicataData: dataLanc, copiaPresente: ainda, resolvidoAutoEm: now });
+                _contResolucao.dup++;
+                console.warn(`Pendência fechada como DUPLICADA: ${n} → já lançada como ${alvo.nome} (${dataLanc})`);
+                filaSincronizacao.add(n); mudou = true;
+                continue;
+            }
+            const m = alvo.nome, velho = it, atual = db[m];
+            const info = (() => { try { return parseNomeArquivo(m) || {}; } catch (e) { return {}; } })();
+            const base = atual || {
+                h: velho.h, ts_in: velho.ts_in, ts_colab: null, ts_out: null, d: dataLanc, h_fim: '', a: 'CONCILIADO', f: 'FINALIZADO', resp: '-',
+                t: classificarTipo(m), aoVivo: false, historico: [], nf: info.nf || '', cnpj: info.cnpj || '', fornecedor: info.fornecedor || '',
+                unidade: info.unidade || '', formaPagamento: info.formaPagamento || '', valorBruto: info.valorBruto, valorLiquido: info.valorLiquido, data: info.data || ''
+            };
+            const tsIns = [base.ts_in, velho.ts_in].filter(Boolean);
+            if (tsIns.length) base.ts_in = Math.min(...tsIns);
+            base.h = velho.h || base.h;
+            base.d_entrada = velho.d_entrada || velho.d || base.d_entrada || base.d;
+            if ((!base.resp || base.resp === '-') && velho.resp && velho.resp !== '-') base.resp = velho.resp;
+            if (!atual || base.f === 'DIRETO' || base.f === 'CIENTE (MANOEL)') base.f = 'FINALIZADO'; // passou pela Origem: não é lançamento direto
+            base.historico = (velho.historico || []).map(h => Object.assign({}, h, { saiu: h.saiu || now })).concat(base.historico || []);
+            if ((velho.devolucoes || []).length) base.devolucoes = (velho.devolucoes || []).concat(base.devolucoes || []);
+            Object.assign(base, { a: 'CONCILIADO', apagado: false, renomeadoDe: n, lancadoComNomeDiferente: true, resolvidoAutoEm: now });
+            db[m] = base;
+            Object.assign(velho, { apagado: true, substituidoPor: m, motivoExclusao: 'Lançada com nome diferente: ' + m });
+            usados.add(m);
+            _contResolucao.nomeDif++;
+            console.log(`Pendência lançada com NOME DIFERENTE: ${n} → ${m} (${dataLanc})`);
+            filaSincronizacao.add(n); filaSincronizacao.add(m); mudou = true;
+        }
+        return mudou;
     }
 
     async function alternarPendentes() {
@@ -2346,15 +2613,24 @@
         // Ao ENTRAR no modo, traz também as pendências que estão só na planilha (de outros
         // computadores/datas), para que a varredura seguinte possa reconferi-las nas pastas.
         if (modoPendentesGlobais) {
-            btn.innerHTML = "⏳ Buscando pendências...";
-            await carregarPendenciasGlobais();
-            btn.innerHTML = "⏳ Verificando pastas antigas...";
-            await varrerLancadosDatasDasPendencias();
-            btn.innerHTML = "📅 Voltar ao Calendário";
+            btn.disabled = true;
+            try {
+                if (podeVarrerPendencias()) {
+                    // Sentinela: busca + pastas antigas + conciliação. Se a automática já rodou há menos de 10 min, só recarrega.
+                    if (_varreduraAuto.emAndamento || Date.now() - _varreduraAuto.ultima < 600000) { btn.innerHTML = "⏳ Buscando pendências..."; await carregarPendenciasGlobais(); }
+                    else await executarVarreduraPendencias('manual', t => { btn.innerHTML = t; });
+                } else {
+                    btn.innerHTML = "⏳ Buscando pendências...";
+                    await carregarPendenciasGlobais(); // computador só de consulta: lista o que está na planilha
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = modoPendentesGlobais ? "📅 Voltar ao Calendário" : "🔍 Localizar Pendências";
+            }
             atualizarTela();
-        } else {
-            arquivosFinalDatasAntigas = new Set();
         }
+        // A lista das pastas antigas de Lançados continua valendo fora do modo pendências: o ciclo normal
+        // segue fechando pendências antigas cujo arquivo está lá (até a próxima varredura renovar a lista).
 
         processarForcado();
     }
@@ -4058,6 +4334,7 @@
             if(monitorInterval) clearInterval(monitorInterval);
             monitorInterval = setInterval(processar, 2000); // 2s: com até 11 pastas de rede, 1s sobrepunha ciclos e sobrecarregava o servidor de arquivos
             processar();
+            try { varreduraAoAbrir(); } catch (e) { console.warn('Varredura automática:', e); }
         }
     }
 
@@ -4897,9 +5174,10 @@
         if (modoPendentesGlobais) {
             // Modo "Localizar Pendências": inclui tudo que ainda não foi lançado, de qualquer dia
             // (arquivos esquecidos há dias na pasta de alguém), além do que foi lançado no dia selecionado.
-            return Object.keys(db).filter(n => !db[n].apagado && (db[n].a !== "CONCILIADO" || db[n].d === dataFiltro));
+            return Object.keys(db).filter(n => !db[n].apagado && db[n].fechadoPor !== 'DUPLICADA' && (db[n].a !== "CONCILIADO" || db[n].d === dataFiltro));
         }
-        return Object.keys(db).filter(n => !db[n].apagado && db[n].d === dataFiltro);
+        // Cópia fechada como DUPLICADA não entra: a nota já é conferida pelo arquivo que foi lançado
+        return Object.keys(db).filter(n => !db[n].apagado && db[n].fechadoPor !== 'DUPLICADA' && db[n].d === dataFiltro);
     }
 
     const STATUS_SOLUS = {
@@ -5109,7 +5387,7 @@
                 // registro, um item que entrou dia 05 e foi lançado hoje tinha o metadado procurado
                 // na pasta de 05, falhava, e a data do lançamento não era gravada.
                 porChave.final.forEach(nome => { pastaOndeAchou[nome] = dataAlvoIso; });
-                if (modoPendentesGlobais && arquivosFinalDatasAntigas.size > 0) {
+                if (arquivosFinalDatasAntigas.size > 0) {
                     filesF = new Set(porChave.final);
                     for (const n in db) {
                         if (!db[n].apagado && db[n].a !== "CONCILIADO" && arquivosFinalDatasAntigas.has(n)) filesF.add(n);
@@ -5261,6 +5539,13 @@
                     }
                 }
 
+                // Pendência cujo PDF está em Lançados com OUTRO nome (mesma NF + CNPJ): fecha como
+                // "lançada com nome diferente" ou, se a cópia ainda está na Origem/colaboradora, "duplicada".
+                if (conexoes["FINAL"]) {
+                    try { if (resolverPorNfCnpj(filesO, filesF, filesColabs, porChave.final, dataAlvoIso, now)) houveMudanca = true; }
+                    catch (eNf) { console.warn('Resolução por NF+CNPJ:', eNf); }
+                }
+
                 // Pré-busca em paralelo a data real de TODOS os arquivos que vão virar conciliado
                 // neste ciclo — evita buscar um de cada vez, sequencialmente, dentro do laço abaixo.
                 // Isso importa muito logo depois de reconectar uma pasta que ficou fora do ar por um
@@ -5292,6 +5577,12 @@
                     // tendo sido lançado de verdade, continuaria parado como "aberto"/"recortado" para sempre.
                     const algumaPastaConectada = !!conexoes["ORIGEM"] || !!conexoes["FINAL"] || Object.keys(filesColabs).length > 0;
                     if (db[n].fonteSheet && !db[n].aoVivo && !algumaPastaConectada) continue;
+                    // Fechada como DUPLICADA: não volta para o fluxo; só acompanha se a cópia ainda está em alguma pasta
+                    if (db[n].fechadoPor === 'DUPLICADA') {
+                        const pres = filesO.has(n) || Object.values(filesColabs).some(s => s && s.has(n));
+                        if (!!db[n].copiaPresente !== pres) { db[n].copiaPresente = pres; houveMudanca = true; }
+                        continue;
+                    }
                     // Nunca mexe num item já finalizado (CONCILIADO) de outro dia — evita apagar histórico
                     if (db[n].d !== dataAlvo && db[n].a === "CONCILIADO") continue;
                     // IMPORTANTE: itens ainda PENDENTES (AGUARDANDO/EM ANDAMENTO) são sempre reconciliados,
@@ -5552,6 +5843,12 @@
         const ult = ev[ev.length - 1];
         return `<div style="margin-top:4px;"><span class="chip ${semMotivo ? 'chip-erro' : 'chip-alerta'}" style="cursor:pointer;" title="${esc(tit)}" onclick="abrirMotivoDevolucao('${nq}')">↩️ Devolvido ${ev.length}x${ult.motivo ? ' · ' + esc(ult.motivo) : ' · sem motivo'}${aguard ? ' · aguardando correção' : db[n].aguardandoSubst ? ' · excluído, aguardando substituto' : (ult.substituido ? ' · substituído' : ult.corrigidoEm ? ' · corrigido' : '')}</span></div>`;
     }
+    function chipResolucaoAuto(r) {
+        if (!r) return '';
+        if (r.fechadoPor === 'DUPLICADA') return `<div style="margin-top:4px;"><span class="chip chip-erro" title="${esc(`Mesma NF + CNPJ já lançada no arquivo: ${r.duplicataDe} (Lançados de ${r.duplicataData || '?'}). Esta cópia não deve ser lançada.`)}">🔁 Já lançada em ${esc(r.duplicataData || 'outra data')}${r.copiaPresente ? ' · apagar a cópia da pasta' : ' · cópia removida'}</span></div>`;
+        if (r.lancadoComNomeDiferente) return `<div style="margin-top:4px;"><span class="chip chip-alerta" title="${esc(`Entrou na Origem como: ${r.renomeadoDe}\nFoi salvo em Lançados com outro nome (mesma NF + CNPJ).`)}">✏️ Lançada com nome diferente</span></div>`;
+        return '';
+    }
     function abrirMotivoDevolucao(nome) {
         const item = db[nome]; if (!item || !(item.devolucoes || []).length) return;
         document.querySelectorAll('.modal-devolucao').forEach(el => el.remove());
@@ -5641,7 +5938,7 @@
         if (!info.cnpj || !info.nf) out.push(chip('alerta', 'Nome ✗', 'Nome fora do padrão: não foi possível extrair NF/CNPJ'));
         else if (!validarDocumento(info.cnpj)) out.push(chip('erro', 'CNPJ ✗', `CNPJ/CPF ${info.cnpj} com dígito verificador inválido`));
         else out.push(chip('ok', 'Dados ✓', `NF ${info.nf} · CNPJ ${info.cnpj}`));
-        const dups = duplicatasDe(n);
+        const dups = db[n] && db[n].fechadoPor === 'DUPLICADA' ? [] : duplicatasDe(n); // já sinalizada no Fluxo
         if (dups.length) {
             const jaLancada = dups.some(d => d.lancado) && db[n] && db[n].a !== 'CONCILIADO';
             out.push(chip('erro', jaLancada ? '🔁 Já lançada' : '🔁 Duplicado', (jaLancada ? 'ATENÇÃO: esta NF já foi LANÇADA em outro arquivo — não lançar de novo (risco de pagamento em duplicidade). ' : 'Mesma NF + CNPJ em mais de um arquivo. ') +
@@ -5734,7 +6031,7 @@
                     ${btnCiencia}
                 </td>
                 <td style="text-align:center; font-weight:700; font-size:0.75rem;">${r.resp === '-' ? `<span onclick="atribuirResponsavelManual('${nq}')" style="cursor:pointer; color:#c62828; text-decoration:underline dotted; text-underline-offset:3px;" title="Clique para atribuir manualmente o responsável">⚠ sem responsável</span>` : `<span onclick="atribuirResponsavelManual('${nq}')" style="cursor:pointer; color:#0A5F55;" title="Clique para corrigir o responsável">${esc(r.resp)}</span>`}</td>
-                <td style="text-align:center"><span class="badge ${badgeFluxoClass}">${esc(r.f)}</span> <span onclick="verHistoricoItem('${nq}')" style="cursor:pointer; opacity:0.6;" title="Ver linha do tempo (data/hora de entrada e saída em cada pasta)">🕐</span>${chipDevolucao(n, nq)}</td>
+                <td style="text-align:center"><span class="badge ${badgeFluxoClass}">${esc(r.f)}</span> <span onclick="verHistoricoItem('${nq}')" style="cursor:pointer; opacity:0.6;" title="Ver linha do tempo (data/hora de entrada e saída em cada pasta)">🕐</span>${chipDevolucao(n, nq)}${chipResolucaoAuto(r)}</td>
                 <td style="text-align:center"><span class="badge ${statusAudit}">${esc(r.a)}</span></td>
                 <td style="text-align:center">${chipsConferencia(n, chavesAsten)}</td>
                 <td style="text-align:center">${blocoSLA}</td>
@@ -5771,6 +6068,7 @@
         }
 
         atualizarVisualFiltros();
+        try { renderPainelPendencias(); } catch (e) { console.warn('Painel de pendências:', e); }
     }
 
     // CSV com campos entre aspas (antes um ";" no nome do arquivo deslocava todas as colunas) e com as
