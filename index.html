@@ -310,6 +310,15 @@
         .table-shell { border-radius: 12px !important; border: 1px solid #DCE7E1 !important; }
         .table-shell thead th { background: #EAF6EF !important; color: var(--u-verde-esc) !important; }
         .footer { margin-top: auto; }
+        .busca-doc { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #fff; border: 1.5px solid #CFE3D8; border-radius: 12px; padding: 6px 10px; margin-bottom: 8px; position: sticky; top: 0; z-index: 30; box-shadow: 0 2px 8px rgba(0,153,93,.06); }
+        .busca-doc:focus-within { border-color: var(--u-verde); box-shadow: 0 0 0 3px rgba(0,153,93,.15); }
+        .bd-ico { font-size: .95rem; }
+        #busca-doc { flex: 1; min-width: 220px; border: none; outline: none; font: 500 .86rem 'Inter', sans-serif; color: #1F2933; background: transparent; padding: 6px 2px; }
+        .bd-todas { display: inline-flex; align-items: center; gap: 5px; font-size: .74rem; font-weight: 600; color: var(--u-verde-esc); cursor: pointer; white-space: nowrap; }
+        .bd-res { font-size: .74rem; color: #5B5C65; white-space: nowrap; } .bd-res b { color: var(--u-verde); }
+        .bd-limpar { border: none; background: #EAF6EF; color: var(--u-verde-esc); border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-weight: 800; }
+        .bd-mark { background: #FFE58A; color: inherit; border-radius: 3px; padding: 0 1px; }
+        @media print { .busca-doc { display: none !important; } }
         @media print { .sidebar, .hero, .cap-rotulo, .linha-tipos { display: none !important; } .main { margin-left: 0 !important; } .main > .container { padding: 0 !important; } }
 
     </style>
@@ -455,6 +464,13 @@
 
     <!-- CAPÍTULO 4 — Os documentos -->
     <div class="cap-rotulo"><span>4</span> Os documentos <small id="cap-docs-sub"></small></div>
+    <div class="busca-doc" role="search">
+        <span class="bd-ico">🔎</span>
+        <input type="search" id="busca-doc" placeholder="Buscar documento: digite parte ou todo o nome, fornecedor, NF, CNPJ ou responsável" autocomplete="off" oninput="aoBuscarDoc()" onkeydown="if(event.key==='Escape'){limparBusca();}" title="Várias palavras: traz o que tiver todas elas. Números ignoram pontos, barras e traços (CNPJ/NF).">
+        <label class="bd-todas" title="Procurar também nos documentos de outras datas já registrados neste computador"><input type="checkbox" id="busca-todas" onchange="aoBuscarDoc()"> todas as datas</label>
+        <span id="busca-res" class="bd-res"></span>
+        <button type="button" id="busca-limpar" class="bd-limpar" onclick="limparBusca()" title="Limpar a busca (Esc)" style="display:none;">✕</button>
+    </div>
 
     <div id="modal-dashboard" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:5000; padding:0;">
         <div style="position:absolute; top:0; right:0; left:0; bottom:0; background:white; display:flex; flex-direction:column;">
@@ -623,6 +639,48 @@
     let filtroDevol = false;  // true = só documentos que voltaram para a Origem
     let filtroErro = false;   // true = mostra só itens com erro de leitura isolado
 
+    // ===== BUSCA POR NOME DO DOCUMENTO =====
+    let filtroBusca = [];      // termos já normalizados (sem acento, minúsculos)
+    const normBusca = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    function buscaTodasDatas() { const c = document.getElementById('busca-todas'); return !!(filtroBusca.length && c && c.checked); }
+    function casaBusca(n) {
+        if (!filtroBusca.length) return true;
+        const r = db[n] || {};
+        const txt = normBusca([n, r.resp, r.fornecedor, r.f, r.d_entrada || r.d].join(' '));
+        const dig = String(n).replace(/\D/g, '') + ' ' + String(r.cnpj || '').replace(/\D/g, '') + ' ' + String(r.nf || '').replace(/\D/g, '');
+        return filtroBusca.every(t => {
+            if (txt.includes(t)) return true;
+            const td = t.replace(/[.\/\-\s]/g, '');
+            return /^\d+$/.test(td) && td.length >= 2 && dig.includes(td);
+        });
+    }
+    let _tmBusca = null;
+    function aoBuscarDoc() {
+        clearTimeout(_tmBusca);
+        _tmBusca = setTimeout(() => {
+            const v = (document.getElementById('busca-doc') || {}).value || '';
+            filtroBusca = normBusca(v).split(/\s+/).filter(Boolean);
+            const bt = document.getElementById('busca-limpar'); if (bt) bt.style.display = filtroBusca.length ? '' : 'none';
+            atualizarTela();
+        }, 180);
+    }
+    function limparBusca() {
+        const i = document.getElementById('busca-doc'); if (i) i.value = '';
+        filtroBusca = []; const bt = document.getElementById('busca-limpar'); if (bt) bt.style.display = 'none';
+        atualizarTela();
+    }
+    // Destaca no nome os trechos digitados (sem diferenciar acento/maiúscula)
+    function realceBusca(nome) {
+        const termos = filtroBusca.filter(t => !/^\d[\d.\/\-]*$/.test(t) || t.length >= 2);
+        if (!termos.length) return esc(nome);
+        const chars = Array.from(String(nome)), base = chars.map(c => normBusca(c).charAt(0) || c).join('');
+        const marca = new Array(chars.length).fill(false);
+        termos.forEach(t => { let i = base.indexOf(t); while (i >= 0) { for (let k = i; k < i + t.length; k++) marca[k] = true; i = base.indexOf(t, i + 1); } });
+        let out = '', aberto = false;
+        chars.forEach((c, i) => { if (marca[i] && !aberto) { out += '<mark class="bd-mark">'; aberto = true; } if (!marca[i] && aberto) { out += '</mark>'; aberto = false; } out += esc(c); });
+        return out + (aberto ? '</mark>' : '');
+    }
+
     let filtroPendGrupo = null; // null | grupo do painel de pendências (ORIGEM, COLAB, ...)
     let filtroPendIdade = null; // null | faixa de idade em dias úteis ('0', '1-3', '3-7', '7+')
 
@@ -630,12 +688,14 @@
         const dataFiltro = getDataSelecionada();
         // Filtro "cópias duplicadas": itens fechados (CONCILIADO) mas com a cópia ainda numa pasta
         if (filtroPendGrupo === 'DUPLICADA') return Object.keys(db).filter(n => !db[n].apagado && db[n].fechadoPor === 'DUPLICADA' && db[n].copiaPresente);
+        if (buscaTodasDatas()) return Object.keys(db).filter(n => !db[n].apagado); // busca em todas as datas registradas
         return Object.keys(db).filter(n => !db[n].apagado && (modoPendentesGlobais ? db[n].a !== "CONCILIADO" : db[n].d === dataFiltro));
     }
 
     function getChavesFiltradas() {
         return getChavesBase().filter(n => {
             const r = db[n];
+            if (filtroBusca.length && !casaBusca(n)) return false;
             if (filtroPendGrupo && filtroPendGrupo !== 'DUPLICADA' && (r.a === 'CONCILIADO' || grupoPendencia(n) !== filtroPendGrupo)) return false;
             if (filtroPendIdade && (r.a === 'CONCILIADO' || faixaIdade(n) !== filtroPendIdade)) return false;
             if (filtroStatus === 'CONCILIADO' && r.a !== 'CONCILIADO') return false;
@@ -753,6 +813,8 @@
     function limparFiltrosCaixa() {
         filtroStatus = null; filtroTipo = null; filtroResp = null; filtroErro = false; filtroDevol = false;
         filtroPendGrupo = null; filtroPendIdade = null;
+        const ib = document.getElementById('busca-doc'); if (ib) ib.value = ''; filtroBusca = [];
+        const bl = document.getElementById('busca-limpar'); if (bl) bl.style.display = 'none';
         atualizarTela();
     }
 
@@ -883,7 +945,7 @@
         marcar('card-sem-resp', filtroResp === '-');
         marcar('card-erro-leitura', filtroErro);
         marcar('card-devolvidos', filtroDevol);
-        const algumFiltro = !!(filtroStatus || filtroTipo || filtroResp || filtroErro || filtroDevol || filtroPendGrupo || filtroPendIdade);
+        const algumFiltro = !!(filtroStatus || filtroTipo || filtroResp || filtroErro || filtroDevol || filtroPendGrupo || filtroPendIdade || filtroBusca.length);
         const btnLimpar = document.getElementById('btn-limpar-filtro-caixa');
         if (btnLimpar) btnLimpar.style.display = algumFiltro ? 'inline-flex' : 'none';
     }
@@ -6147,7 +6209,7 @@
                 </td>
                 <td>
                     <div style="display:flex; gap:8px; align-items:flex-start;">
-                        <div class="file-entry ${isDireto ? 'file-direto' : catC}"><span class="tag-small">${esc(r.t)}</span>${esc(n)}</div>
+                        <div class="file-entry ${isDireto ? 'file-direto' : catC}"><span class="tag-small">${esc(r.t)}</span>${filtroBusca.length ? realceBusca(n) : esc(n)}</div>
                         ${r.erroLeitura ? `<span title="Falha ao extrair dados deste arquivo automaticamente (${esc(r.erroLeitura)}). O item foi registrado mesmo assim, mas confira manualmente." style="color:#8a6d00; cursor:help; font-size:0.9rem;">🛠️</span>` : ''}
                     </div>
                     ${btnCiencia}
@@ -6160,7 +6222,11 @@
             </tr>`;
         });
 
-        if (tot === 0) {
+        const elRes = document.getElementById('busca-res');
+        if (elRes) elRes.innerHTML = filtroBusca.length ? `<b>${tot}</b> ${tot === 1 ? 'documento encontrado' : 'documentos encontrados'}${buscaTodasDatas() ? ' em todas as datas' : (modoPendentesGlobais ? ' nas pendências' : ' em ' + esc(dataFiltro))}` : '';
+        if (tot === 0 && filtroBusca.length) {
+            corpo.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px; color:#5B5C65;">Nenhum documento com “${esc((document.getElementById('busca-doc') || {}).value || '')}”${buscaTodasDatas() ? '' : ' nesta data. Marque <b>todas as datas</b> para procurar nos outros dias'}.</td></tr>`;
+        } else if (tot === 0) {
             corpo.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:50px; color:${modoPendentesGlobais ? '#00995D' : '#94a3b8'}; font-weight:${modoPendentesGlobais ? 'bold' : 'normal'}; font-style: ${modoPendentesGlobais ? 'normal' : 'italic'};">${modoPendentesGlobais ? '🎉 Nenhuma pendência encontrada!' : 'Clique nos botões de conexão acima para iniciar a auditoria...'}</td></tr>`;
         } else {
             corpo.innerHTML = htmlConteudo;
