@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Monitor de Lançamentos - Unimed v19.0</title>
+    <title>Monitor de Lançamentos - Unimed v19.1</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@600;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -229,9 +229,131 @@
         .mu-novo { margin-top:12px; padding:10px; border:1px dashed #9ED3B9; border-radius:10px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; } .mu-novo .btn { background:#00995D; color:#fff; border:none; }
         body.sem-ciencia .btn-ciencia, body.sem-ciencia [onclick^="atribuirResponsavelManual("], body.sem-excluir .chk-item, body.sem-excluir #checkAll { display:none !important; }
         @media print { .usuario-chip, .menu-usuario, .tela-login, .modal-usuarios, .painel-pend { display:none !important; } }
+        /* ===================== LAYOUT v19.1 — menu lateral + storytelling (padrão Unimed) ===================== */
+        :root { --sb-w: 236px; --sb-w-min: 62px; --u-verde: #00995D; --u-verde-esc: #0A5F55; --u-lima: #B1D34B; --u-amarelo: #FFCB08; --u-laranja: #F47920; --u-roxo: #411564; --u-cinza: #5B5C65; --u-fundo: #F3F7F5; }
+        body { background: var(--u-fundo) !important; padding-bottom: 0 !important; }
+        .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: var(--sb-w); z-index: 4500; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; overflow-x: hidden;
+            background: linear-gradient(180deg, #0A5F55 0%, #00805a 55%, #00995D 100%); color: #fff; padding: 12px 10px 10px; box-sizing: border-box; box-shadow: 2px 0 12px rgba(10,95,85,.18); transition: width .2s; }
+        .main { margin-left: var(--sb-w); transition: margin-left .2s; min-height: 100vh; display: flex; flex-direction: column; }
+        .main > .container { flex: 1; width: 100%; box-sizing: border-box; max-width: 1500px; padding: 14px 24px 24px; }
+        .sb-marca { display: flex; flex-direction: column; align-items: stretch; gap: 8px; position: relative; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.18); margin-bottom: 6px; }
+        .sb-logo { background: #fff; border-radius: 10px; padding: 8px; justify-content: center; margin: 0 !important; order: 0 !important; min-height: 44px; position: relative; }
+        .sb-logo img { max-width: 100% !important; height: 44px !important; }
+        .sb-logo .btn-logo { position: absolute; right: 4px; bottom: 4px; padding: 1px 4px; font-size: .55rem; opacity: .0; transition: opacity .2s; }
+        .sb-logo:hover .btn-logo { opacity: 1; }
+        .sb-titulo { color: #fff !important; font-size: .86rem !important; line-height: 1.15; white-space: normal !important; text-transform: none !important; }
+        .sb-titulo small { display: block; font-family: 'Inter', sans-serif; font-weight: 600; font-size: .64rem; color: var(--u-lima); letter-spacing: .4px; text-transform: uppercase; margin-top: 2px; }
+        .sb-recolher { position: absolute; right: -2px; bottom: 6px; background: rgba(255,255,255,.14); color: #fff; border: none; border-radius: 6px; width: 28px; height: 26px; cursor: pointer; font-size: .9rem; }
+        .sb-recolher:hover { background: rgba(255,255,255,.28); }
+        .sb-status { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 4px; }
+        .sb-status .status-pill { background: rgba(255,255,255,.14); color: #fff; min-width: 0; justify-content: flex-start; }
+        .sb-status .usuario-chip { background: rgba(255,255,255,.95) !important; margin: 0 !important; }
+        .sb-secao { font-size: .58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--u-lima); margin: 10px 6px 3px; white-space: nowrap; }
+        .sb-secao-risco { color: #FFD27A; }
+        .sb-item { position: relative; display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; background: transparent; border: none; color: #fff; font: 600 .78rem 'Inter', sans-serif;
+            padding: 8px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; overflow: hidden; transition: background .15s; box-sizing: border-box; }
+        .sb-item:hover { background: rgba(255,255,255,.14); }
+        .sb-item.ativo { background: #fff; color: var(--u-verde-esc); font-weight: 800; box-shadow: inset 4px 0 0 var(--u-lima); }
+        .sb-item.ativo-pend { background: var(--u-laranja); color: #fff; font-weight: 800; }
+        .sb-risco { color: #FFE2B8; } .sb-risco:hover { background: rgba(244,121,32,.35); color: #fff; }
+        .sb-item .sb-txt { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .sb-badge { margin-left: auto; flex-shrink: 0; min-width: 18px; text-align: center; border-radius: 10px; padding: 1px 7px; font-size: .64rem; font-weight: 800; color: #fff; }
+        .sb-badge-laranja { background: var(--u-laranja); } .sb-badge-roxo { background: var(--u-roxo); box-shadow: 0 0 0 1px rgba(255,255,255,.4); }
+        .sb-data { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 8px; background: rgba(255,255,255,.12); margin: 2px 0 4px; font-size: .8rem; }
+        .sb-data input { flex: 1; min-width: 0; border: none; border-radius: 6px; padding: 5px 6px; font: 600 .76rem 'Inter', sans-serif; color: var(--u-verde-esc); }
+        .sb-rodape { margin-top: auto; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.18); display: flex; flex-direction: column; gap: 6px; font-size: .64rem; }
+        .sb-conexoes { color: #DFF0E8 !important; padding: 0 4px !important; line-height: 1.3; }
+        .sb-rodape #sp-status-indicator { background: rgba(255,255,255,.92); border-radius: 8px; padding: 5px 8px; font-size: .66rem !important; margin: 0 !important; cursor: pointer; }
+        .sb-ref { color: #CFE8DC; padding: 0 4px; }
+        /* Menu recolhido: só ícones */
+        body.sb-recolhida .sidebar { width: var(--sb-w-min); padding-left: 6px; padding-right: 6px; }
+        body.sb-recolhida .main { margin-left: var(--sb-w-min); }
+        body.sb-recolhida .sb-titulo, body.sb-recolhida .sb-secao, body.sb-recolhida .sb-rodape, body.sb-recolhida .sb-logo, body.sb-recolhida .sb-status .usuario-chip span,
+        body.sb-recolhida .sb-status .usuario-chip small, body.sb-recolhida #status-text, body.sb-recolhida .sb-data input { display: none !important; }
+        body.sb-recolhida .sb-recolher { position: static; width: 100%; }
+        body.sb-recolhida .sb-item { padding: 9px 0; justify-content: center; font-size: 1rem; width: 50px; gap: 0; }
+        body.sb-recolhida .sb-item .sb-txt { display: none; }
+        body.sb-recolhida .sb-item .sb-badge { position: absolute; top: 1px; right: 0; font-size: .52rem; padding: 0 4px; }
+        body.sb-recolhida .sb-data { justify-content: center; padding: 6px 0; }
+        body.sb-recolhida .sb-status { align-items: center; }
+        @media (max-width: 900px) { .sidebar { width: var(--sb-w-min); } .main { margin-left: var(--sb-w-min); } }
+        /* Storytelling: contexto → situação → ação */
+        .hero { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: linear-gradient(120deg, #ffffff 0%, #ffffff 55%, #EAF6EF 100%); border: 1px solid #D7E9DF;
+            border-left: 6px solid var(--u-verde); border-radius: 12px; padding: 12px 18px; margin-bottom: 12px; box-shadow: 0 3px 10px rgba(0,153,93,.07); }
+        .hero-txt { flex: 1; min-width: 280px; }
+        .hero-cap { font-family: 'Poppins', sans-serif; font-weight: 800; color: var(--u-verde-esc); font-size: 1.02rem; }
+        .hero-frase { font-size: .86rem; color: #33403B; margin-top: 3px; line-height: 1.5; }
+        .hero-frase .h-ok { color: var(--u-verde); } .hero-frase .h-pend { color: #C45A10; } .hero-frase .h-alerta { color: #C62828; }
+        .hero-frase .h-atencao { display: block; color: #8a4b08; font-size: .8rem; margin-top: 2px; }
+        .hero-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+        .hero-bt { border: none; background: var(--u-verde); color: #fff; font: 700 .74rem 'Inter', sans-serif; padding: 7px 12px; border-radius: 18px; cursor: pointer; }
+        .hero-bt:hover { background: var(--u-verde-esc); } .hero-bt-sec { background: #fff; color: var(--u-verde-esc); border: 1.5px solid var(--u-verde); }
+        .cap-rotulo { display: flex; align-items: center; gap: 8px; font-family: 'Poppins', sans-serif; font-weight: 700; font-size: .74rem; color: var(--u-cinza); text-transform: uppercase; letter-spacing: .6px; margin: 10px 0 6px; }
+        .cap-rotulo > span { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; background: var(--u-verde); color: #fff; align-items: center; justify-content: center; font-size: .66rem; }
+        .cap-rotulo small { text-transform: none; letter-spacing: 0; color: #94a3b8; font-weight: 600; }
+        .cap-rotulo::after { content: ''; flex: 1; height: 1px; background: #DCE7E1; }
+        .grid-stats { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important; gap: 10px !important; margin-bottom: 8px !important; }
+        .grid-stats .card { text-align: left; padding: 10px 14px; border-radius: 10px; border-top: none; border-left: 5px solid var(--c, var(--u-verde)); box-shadow: 0 2px 8px rgba(31,41,51,.05); }
+        .grid-stats .card .card-val { font-size: 1.6rem; color: var(--c, var(--u-verde)); line-height: 1.15; }
+        .card-sub { font-size: .64rem; color: #8a949c; margin-top: 1px; }
+        .card-azul { --c: var(--u-verde-esc); } .card-laranja { --c: var(--u-laranja); } .card-verde { --c: var(--u-verde); } .card-lima { --c: #6f8f12; } .card-amarelo { --c: #b38900; border-left-color: var(--u-amarelo) !important; }
+        .card-amarelo .card-val { color: var(--u-verde-esc) !important; font-size: 1.35rem !important; }
+        .card-barra { height: 6px; background: #EEF3E1; border-radius: 4px; margin-top: 6px; overflow: hidden; } .card-barra i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--u-lima), var(--u-verde)); transition: width .4s; }
+        .linha-tipos { display: flex !important; flex-wrap: wrap; gap: 6px !important; justify-content: flex-start !important; align-items: center; margin-bottom: 4px; }
+        .equipe-stats { justify-content: flex-start !important; gap: 6px !important; }
+        .equipe-card { padding: 6px 12px !important; border-radius: 18px !important; font-size: .72rem !important; }
+        #conexao-bar-wrapper { background: #fff; border: 1px solid #D7E9DF; border-radius: 10px; padding: 8px; margin-bottom: 10px; }
+        .table-shell { border-radius: 12px !important; border: 1px solid #DCE7E1 !important; }
+        .table-shell thead th { background: #EAF6EF !important; color: var(--u-verde-esc) !important; }
+        .footer { margin-top: auto; }
+        @media print { .sidebar, .hero, .cap-rotulo, .linha-tipos { display: none !important; } .main { margin-left: 0 !important; } .main > .container { padding: 0 !important; } }
+
     </style>
 </head>
 <body onload="iniciarComLogin()">
+    <!-- config.local.js contém a URL do Apps Script e o token — NÃO deve ir para o Git (veja .gitignore) -->
+    <script src="config.local.js"></script>
+
+<!-- ===== MENU LATERAL: identidade, navegação e ações (o "como") ===== -->
+<aside class="sidebar" id="toolbar-principal">
+    <div class="sb-marca">
+        <div class="sb-logo logo-slot"><span class="slot-logo" data-h="44"></span><button class="btn-logo" onclick="escolherLogo()" title="Trocar a logo exibida no sistema e em todos os relatórios">🖼</button></div>
+        <div class="sb-titulo brand">Monitor de Lançamentos<small>Suprimentos · NF</small></div>
+        <button class="sb-recolher" onclick="alternarToolbar()" title="Recolher / expandir o menu lateral">☰</button>
+    </div>
+    <div class="sb-status">
+        <div class="status-pill"><div id="status-dot" class="dot"></div><span id="status-text">STANDBY</span></div>
+    </div>
+
+    <div class="sb-secao">Visão</div>
+    <button id="tab-btn-lancamentos" class="sb-item ativo" onclick="mostrarAba('lancamentos')" title="Lançamentos do dia">📋 <span class="sb-txt">Lançamentos</span></button>
+    <button id="tab-btn-asten" class="sb-item" onclick="mostrarAba('asten')" title="Itens do relatório Asten ainda não identificados na Origem">⏳ <span class="sb-txt">Asten pendentes</span> <span id="badge-asten-pendentes" class="sb-badge sb-badge-laranja">0</span></button>
+    <button id="tab-btn-solus" class="sb-item" onclick="mostrarAba('solus')" title="Conferência com o relatório Solus">💰 <span class="sb-txt">Conciliação Solus</span> <span id="badge-solus-alertas" class="sb-badge sb-badge-roxo">0</span></button>
+    <button class="sb-item" onclick="abrirDashboardEmNovaAba()" title="Indicadores, produtividade e relatório em PDF"><span id="dash-icon">📈</span> <span class="sb-txt">Dashboard Interno</span></button>
+
+    <div class="sb-secao">Operação</div>
+    <label class="sb-data" title="Data do histórico">📅 <input type="date" id="data-historico" title="Data do Histórico" onchange="aoTrocarData()"></label>
+    <button class="sb-item" id="btn-pendentes" onclick="alternarPendentes()" title="Pendências de todas as datas">🔍 <span class="sb-txt">Localizar Pendências</span></button>
+    <button class="sb-item" onclick="processarForcado()" title="Ler as pastas e os relatórios agora">🔄 <span class="sb-txt">Atualizar Agora</span></button>
+    <button class="sb-item" id="btn-toggle-conexoes" onclick="toggleConexoes()" title="Pastas e planilha conectadas">🔌 <span class="sb-txt">Conexões</span></button>
+
+    <div class="sb-secao">Relatórios</div>
+    <button class="sb-item" onclick="exportar()" title="Planilha CSV da tela atual">📊 <span class="sb-txt">Relatório CSV</span></button>
+    <button class="sb-item" onclick="imprimirAbaAtual()" title="Imprime/gera PDF da aba aberta com a logo no cabeçalho">🖨️ <span class="sb-txt">Imprimir Aba</span></button>
+
+    <div class="sb-secao sb-secao-risco">Ações em lote</div>
+    <button class="sb-item sb-risco" onclick="darCienciaEmTudo()" title="Dar ciência em todos os lançamentos DIRETOS da tela">✓ <span class="sb-txt">Ciência em Tudo</span></button>
+    <button class="sb-item sb-risco" onclick="excluirSelecionados()" title="Excluir os itens marcados na tabela">🗑️ <span class="sb-txt">Excluir Selecionados</span></button>
+
+    <div class="sb-rodape">
+        <div id="resumo-conexoes" class="sb-conexoes">🔌 <span id="resumo-conexoes-texto">Nenhuma pasta conectada</span></div>
+        <div id="sp-status-indicator" onclick="abrirConfigPlanilha()" title="Clique para configurar a planilha Google">⚪ Fora do SharePoint (salvando só localmente)</div>
+        <div class="sb-ref">Atualizado: <span id="w-time">--:--:--</span></div>
+    </div>
+</aside>
+<input type="file" id="input-logo" accept="image/*" style="display:none" onchange="salvarLogo(this)">
+
+<div class="main">
     <div id="banner-desconexao" style="display:none; position:sticky; top:0; z-index:4000; background:#c62828; color:white; padding:12px 20px; text-align:center; font-weight:800; font-size:0.9rem; box-shadow:0 2px 8px rgba(0,0,0,0.3);">
         ⚠️ <span id="banner-desconexao-texto">Uma pasta perdeu a conexão</span> — os lançamentos NÃO estão sendo atualizados até reconectar.
         <button onclick="document.getElementById('banner-desconexao').style.display='none'; toggleConexoes(true);" style="margin-left:12px; background:white; color:#c62828; border:none; padding:6px 14px; border-radius:6px; font-weight:800; cursor:pointer;">Reconectar agora</button>
@@ -240,93 +362,61 @@
         📅 A data selecionada (<span id="banner-data-antiga-data"></span>) não é hoje — a varredura ao vivo das pastas está <u>pausada</u> (só mostra o que já foi salvo).
         <button onclick="voltarParaHoje()" style="margin-left:12px; background:#212121; color:white; border:none; padding:6px 14px; border-radius:6px; font-weight:800; cursor:pointer;">Voltar pra hoje</button>
     </div>
-    <!-- config.local.js contém a URL do Apps Script e o token — NÃO deve ir para o Git (veja .gitignore) -->
-    <script src="config.local.js"></script>
-
-<nav class="nav">
-    <div class="brand">Monitor de Lançamentos</div>
-    <div class="widgets-top">
-        <div class="widget-item caixa-filtro tipo-badge" id="w-item-prod" onclick="aplicarFiltroCaixa('tipo','PRODUTO')" title="Filtrar por Produtos" style="background:#0A5F55; color:#fff; --cor-badge:#0A5F55;">PRODUTOS: <span id="w-prod">0</span></div>
-        <div class="widget-item caixa-filtro tipo-badge" id="w-item-serv" onclick="aplicarFiltroCaixa('tipo','SERVIÇO')" title="Filtrar por Serviços" style="background:#00995D; color:#fff; --cor-badge:#00995D;">SERVIÇOS: <span id="w-serv">0</span></div>
-        <div class="widget-item caixa-filtro tipo-badge" id="w-item-juri" onclick="aplicarFiltroCaixa('tipo','JURIDICO')" title="Filtrar por Jurídico" style="background:#411564; color:#fff; --cor-badge:#411564;">JURÍDICO: <span id="w-juri">0</span></div>
-        <div class="widget-item caixa-filtro tipo-badge" id="w-item-assi" onclick="aplicarFiltroCaixa('tipo','ASSISTENCIAL')" title="Filtrar por Assistencial" style="background:#F47920; color:#fff; --cor-badge:#F47920;">ASSISTENCIAL: <span id="w-assi">0</span></div>
-        <div class="widget-item caixa-filtro tipo-badge" id="w-item-outr" onclick="aplicarFiltroCaixa('tipo','OUTRO')" title="Filtrar por Outros" style="background:#5B5C65; color:#fff; --cor-badge:#5B5C65;">OUTROS: <span id="w-outr">0</span></div>
-        <div style="color: #94a3b8">Ref: <span id="w-time">--:--:--</span></div>
-        <div id="sp-status-indicator" onclick="abrirConfigPlanilha()" title="Clique para configurar a planilha Google" style="font-size: 0.78rem; font-weight: 700; margin-top: 4px; cursor:pointer;">⚪ Fora do SharePoint (salvando só localmente)</div>
-    </div>
-    <div class="status-pill"><div id="status-dot" class="dot"></div><span id="status-text">STANDBY</span></div>
-    <div class="logo-slot"><span class="slot-logo" data-h="38"></span><button class="btn-logo" onclick="escolherLogo()" title="Trocar a logo exibida no sistema e em todos os relatórios">🖼</button></div>
-</nav>
-<input type="file" id="input-logo" accept="image/*" style="display:none" onchange="salvarLogo(this)">
 
 <div class="container">
     <div class="print-header"><div><div style="font-family:'Poppins',sans-serif; font-weight:800; color:#00995D; font-size:1.1rem;" id="print-titulo">Monitor de Lançamentos</div><div style="font-size:0.72rem; color:#5B5C65;" id="print-sub"></div></div><span class="slot-logo" data-h="46"></span></div>
-    <div class="grid-stats">
-        <div class="card" id="card-total" style="cursor:default;"><div class="card-label">Baixados / Identificados</div><div id="v-total" class="card-val">0</div></div>
-        <div class="card caixa-filtro" id="card-pend" onclick="aplicarFiltroCaixa('status','ABERTO')" title="Clique para filtrar só os itens em aberto"><div class="card-label">Em Aberto</div><div id="v-pend" class="card-val">0</div></div>
-        <div class="card caixa-filtro" id="card-ok" onclick="aplicarFiltroCaixa('status','CONCILIADO')" title="Clique para filtrar só os itens conciliados"><div class="card-label">Conciliados</div><div id="v-ok" class="card-val">0</div></div>
-        <div class="card"><div class="card-label">Eficiência</div><div id="v-perc" class="card-val">0%</div></div>
-        <div class="card" id="card-asten" style="cursor:pointer; border: 1px solid #FFCB08;" onclick="mostrarAba('asten')" title="Clique para ver, numa aba separada, quais itens do relatório Asten ainda não foram baixados">
-            <div class="card-label">Asten: Baixados / Pendentes</div>
-            <div class="card-val" style="font-size:1.3rem;"><span id="v-asten-baixados">0</span> / <span id="v-asten-pendentes" style="color:#c62828;">0</span></div>
+
+    <!-- ===== STORYTELLING: contexto → situação → o que fazer ===== -->
+    <section class="hero" id="hero-historia">
+        <div class="hero-txt">
+            <div class="hero-cap" id="historia-cap">Hoje</div>
+            <div class="hero-frase" id="historia-frase">Carregando o dia…</div>
         </div>
-        <button id="btn-limpar-filtro-caixa" class="btn btn-outline" style="display:none; color:#C62828; border-color:#C62828; align-self:center;" onclick="limparFiltrosCaixa()">✕ Limpar Filtro</button>
+        <div class="hero-acoes" id="historia-acoes"></div>
+    </section>
+
+    <!-- CAPÍTULO 1 — O dia em números -->
+    <div class="cap-rotulo"><span>1</span> O dia em números</div>
+    <div class="grid-stats">
+        <div class="card card-azul" id="card-total" style="cursor:default;"><div class="card-label">Baixados</div><div id="v-total" class="card-val">0</div><div class="card-sub">documentos que chegaram</div></div>
+        <div class="card card-laranja caixa-filtro" id="card-pend" onclick="aplicarFiltroCaixa('status','ABERTO')" title="Clique para filtrar só os itens em aberto"><div class="card-label">Em aberto</div><div id="v-pend" class="card-val">0</div><div class="card-sub">aguardando lançamento</div></div>
+        <div class="card card-verde caixa-filtro" id="card-ok" onclick="aplicarFiltroCaixa('status','CONCILIADO')" title="Clique para filtrar só os itens conciliados"><div class="card-label">Conciliados</div><div id="v-ok" class="card-val">0</div><div class="card-sub">lançados e arquivados</div></div>
+        <div class="card card-lima"><div class="card-label">Eficiência</div><div id="v-perc" class="card-val">0%</div><div class="card-barra"><i id="barra-perc"></i></div></div>
+        <div class="card card-amarelo" id="card-asten" style="cursor:pointer;" onclick="mostrarAba('asten')" title="Clique para ver quais itens do relatório Asten ainda não foram baixados">
+            <div class="card-label">Asten: baixados / pendentes</div>
+            <div class="card-val"><span id="v-asten-baixados">0</span> / <span id="v-asten-pendentes" style="color:#c62828;">0</span></div><div class="card-sub">esperados no relatório</div>
+        </div>
+    </div>
+    <div class="linha-tipos widgets-top">
+        <div class="widget-item caixa-filtro tipo-badge" id="w-item-prod" onclick="aplicarFiltroCaixa('tipo','PRODUTO')" title="Filtrar por Produtos" style="background:#0A5F55; color:#fff; --cor-badge:#0A5F55;">PRODUTOS <span id="w-prod">0</span></div>
+        <div class="widget-item caixa-filtro tipo-badge" id="w-item-serv" onclick="aplicarFiltroCaixa('tipo','SERVIÇO')" title="Filtrar por Serviços" style="background:#00995D; color:#fff; --cor-badge:#00995D;">SERVIÇOS <span id="w-serv">0</span></div>
+        <div class="widget-item caixa-filtro tipo-badge" id="w-item-juri" onclick="aplicarFiltroCaixa('tipo','JURIDICO')" title="Filtrar por Jurídico" style="background:#411564; color:#fff; --cor-badge:#411564;">JURÍDICO <span id="w-juri">0</span></div>
+        <div class="widget-item caixa-filtro tipo-badge" id="w-item-assi" onclick="aplicarFiltroCaixa('tipo','ASSISTENCIAL')" title="Filtrar por Assistencial" style="background:#F47920; color:#fff; --cor-badge:#F47920;">ASSISTENCIAL <span id="w-assi">0</span></div>
+        <div class="widget-item caixa-filtro tipo-badge" id="w-item-outr" onclick="aplicarFiltroCaixa('tipo','OUTRO')" title="Filtrar por Outros" style="background:#5B5C65; color:#fff; --cor-badge:#5B5C65;">OUTROS <span id="w-outr">0</span></div>
+        <button id="btn-limpar-filtro-caixa" class="btn btn-outline" style="display:none; color:#C62828; border-color:#C62828; margin-left:auto;" onclick="limparFiltrosCaixa()">✕ Limpar Filtro</button>
     </div>
 
-    <!-- PLACAR DE PRODUTIVIDADE (compacto, ao lado dos cards acima na versão desktop) -->
+    <!-- CAPÍTULO 2 — Quem está com o quê -->
+    <div class="cap-rotulo"><span>2</span> Quem está com o quê</div>
     <div class="equipe-stats">
         <div class="equipe-card caixa-filtro" id="equipe-card-DANIELA" onclick="aplicarFiltroCaixa('resp','DANIELA')" title="Filtrar por Daniela">Daniela <span id="qtd-DANIELA">0</span></div>
         <div class="equipe-card caixa-filtro" id="equipe-card-NATALIA" onclick="aplicarFiltroCaixa('resp','NATALIA')" title="Filtrar por Natalia">Natalia <span id="qtd-NATALIA">0</span></div>
         <div class="equipe-card caixa-filtro" id="equipe-card-QUELITA" onclick="aplicarFiltroCaixa('resp','QUELITA')" title="Filtrar por Quelita">Quelita <span id="qtd-QUELITA">0</span></div>
         <div class="equipe-card caixa-filtro" id="equipe-card-TEREZINHA" onclick="aplicarFiltroCaixa('resp','TEREZINHA')" title="Filtrar por Terezinha">Terezinha <span id="qtd-TEREZINHA">0</span></div>
-	<div class="equipe-card caixa-filtro" id="equipe-card-CRISTINA" onclick="aplicarFiltroCaixa('resp','CRISTINA')" title="Filtrar por Cristina">Cristina <span id="qtd-CRISTINA">0</span></div>
-	<div class="equipe-card caixa-filtro" id="equipe-card-ANANDA" onclick="aplicarFiltroCaixa('resp','ANANDA')" title="Filtrar por Ananda">Ananda <span id="qtd-ANANDA">0</span></div>
-	<div class="equipe-card caixa-filtro" id="equipe-card-MANOEL" onclick="aplicarFiltroCaixa('resp','MANOEL')" title="Filtrar por Manoel">Manoel <span id="qtd-MANOEL">0</span></div>
-	<div class="equipe-card caixa-filtro" id="card-sem-resp" onclick="aplicarFiltroCaixa('resp','-')" title="Clique para ver e corrigir os itens sem responsável identificado" style="display:none; border-color:#c62828; background:#fdecea; color:#c62828;">⚠ Sem Responsável <span id="qtd-SEM-RESP">0</span></div>
-	<div class="equipe-card caixa-filtro" id="card-erro-leitura" onclick="aplicarFiltroCaixa('erro','1')" title="Clique para ver os itens em que a leitura automática falhou (registrados mesmo assim)" style="display:none; border-color:#FFCB08; background:#fff8e1; color:#8d6e00;">🛠 Erro de Leitura <span id="qtd-ERRO-LEITURA">0</span></div>
-	<div class="equipe-card caixa-filtro" id="card-devolvidos" onclick="aplicarFiltroCaixa('devol','1')" title="Documentos que a colaboradora devolveu para a Origem por divergência na conferência" style="display:none; border-color:#F47920; background:#FFF3E8; color:#B4500F;">↩️ Devolvidos à Origem <span id="qtd-DEVOLVIDOS">0</span></div>
-
+        <div class="equipe-card caixa-filtro" id="equipe-card-CRISTINA" onclick="aplicarFiltroCaixa('resp','CRISTINA')" title="Filtrar por Cristina">Cristina <span id="qtd-CRISTINA">0</span></div>
+        <div class="equipe-card caixa-filtro" id="equipe-card-ANANDA" onclick="aplicarFiltroCaixa('resp','ANANDA')" title="Filtrar por Ananda">Ananda <span id="qtd-ANANDA">0</span></div>
+        <div class="equipe-card caixa-filtro" id="equipe-card-MANOEL" onclick="aplicarFiltroCaixa('resp','MANOEL')" title="Filtrar por Manoel">Manoel <span id="qtd-MANOEL">0</span></div>
+        <div class="equipe-card caixa-filtro equipe-alerta" id="card-sem-resp" onclick="aplicarFiltroCaixa('resp','-')" title="Clique para ver e corrigir os itens sem responsável identificado" style="display:none; border-color:#c62828; background:#fdecea; color:#c62828;">⚠ Sem responsável <span id="qtd-SEM-RESP">0</span></div>
+        <div class="equipe-card caixa-filtro equipe-alerta" id="card-erro-leitura" onclick="aplicarFiltroCaixa('erro','1')" title="Clique para ver os itens em que a leitura automática falhou (registrados mesmo assim)" style="display:none; border-color:#FFCB08; background:#fff8e1; color:#8d6e00;">🛠 Erro de leitura <span id="qtd-ERRO-LEITURA">0</span></div>
+        <div class="equipe-card caixa-filtro equipe-alerta" id="card-devolvidos" onclick="aplicarFiltroCaixa('devol','1')" title="Documentos que a colaboradora devolveu para a Origem por divergência na conferência" style="display:none; border-color:#F47920; background:#FFF3E8; color:#B4500F;">↩️ Devolvidos à Origem <span id="qtd-DEVOLVIDOS">0</span></div>
     </div>
 
-    <!-- PAINEL DE PENDÊNCIAS POR TIPO E IDADE (todas as datas) -->
+    <!-- CAPÍTULO 3 — O que precisa de atenção (todas as datas) -->
+    <div class="cap-rotulo" id="cap-pendencias"><span>3</span> O que precisa de atenção</div>
     <div id="painel-pendencias" class="painel-pend" style="display:none;"></div>
 
-    <div class="toolbar" id="toolbar-principal">
-        <button id="btn-mostrar-toolbar" onclick="alternarToolbar()" title="Mostrar a barra de ferramentas">▼ Mostrar barra de ferramentas</button>
-        <div class="toolbar-top">
-            <input type="date" id="data-historico" title="Data do Histórico" onchange="aoTrocarData()">
-            <button class="btn btn-outline" id="btn-pendentes" onclick="alternarPendentes()" style="color: #F47920; border-color: #F47920;">🔍 Localizar Pendências</button>
-            <button class="btn btn-outline" onclick="processarForcado()" style="background:#0A5F55; color:white; border:none;">🔄 Atualizar Agora</button>
-            <button class="btn btn-outline" id="btn-toggle-conexoes" onclick="toggleConexoes()" style="color:#0A5F55; border-color:#0A5F55;">🔌 Conexões</button>
-
-            <div class="toolbar-divisor"></div>
-
-            <button class="btn btn-outline" style="color:#0A5F55; border-color:#0A5F55; font-weight:800;" onclick="abrirDashboardEmNovaAba()"><span id="dash-icon">📈</span> Dashboard Interno</button>
-            <button class="btn btn-outline" onclick="exportar()">📊 Relatório CSV</button>
-            <button class="btn btn-outline" onclick="imprimirAbaAtual()" title="Imprime/gera PDF da aba aberta (Lançamentos, Asten ou Solus) com a logo no cabeçalho">🖨️ Imprimir Aba</button>
-
-            <div class="toolbar-divisor"></div>
-
-            <div class="toolbar-zona-risco" title="Ações que alteram vários itens de uma vez — use com atenção">
-                <button class="btn btn-outline" style="color:#C62828; border-color:#C62828;" onclick="darCienciaEmTudo()">✓ Ciência em Tudo</button>
-                <button class="btn btn-outline" style="color:#F47920; border-color:#F47920;" onclick="excluirSelecionados()">🗑️ Excluir Selecionados</button>
-            </div>
-
-            <div class="toolbar-divisor"></div>
-
-            <button id="tab-btn-lancamentos" class="btn" style="background:#00995D; color:white; border:none; font-weight:800;" onclick="mostrarAba('lancamentos')">📋 Lançamentos</button>
-            <button id="tab-btn-asten" class="btn btn-outline" style="color:#F47920; border-color:#F47920; font-weight:800;" onclick="mostrarAba('asten')">⏳ Não Identificados na Origem (Asten) <span id="badge-asten-pendentes" style="background:#F47920; color:white; border-radius:10px; padding:1px 8px; margin-left:4px;">0</span></button>
-            <button id="tab-btn-solus" class="btn btn-outline" style="color:#411564; border-color:#411564; font-weight:800;" onclick="mostrarAba('solus')">💰 Conciliação Solus <span id="badge-solus-alertas" style="background:#411564; color:white; border-radius:10px; padding:1px 8px; margin-left:4px;">0</span></button>
-            <button class="btn btn-outline btn-ocultar" onclick="alternarToolbar()" title="Recolher a barra de ferramentas para ganhar espaço na tela">▲ Ocultar</button>
-        </div>
-
-        <!-- RESUMO COMPACTO DAS CONEXÕES (sempre visível, mesmo com o painel recolhido) -->
-        <div id="resumo-conexoes" style="font-size:0.68rem; font-weight:700; color:#94a3b8; padding:0 4px;">
-            🔌 <span id="resumo-conexoes-texto">Nenhuma pasta conectada</span>
-        </div>
-
-        <!-- PAINEL DE CONEXÕES (recolhido por padrão — clique em "🔌 Conexões" para abrir) -->
-        <div id="conexao-bar-wrapper" style="display:none;">
+    <!-- PAINEL DE CONEXÕES (abre pelo menu "🔌 Conexões") -->
+    <div id="conexao-bar-wrapper" style="display:none;">
             <div class="conexao-bar">
                 <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">1. ENTRADA</span>
                 <button id="btn-conn-ORIGEM" class="btn-conn conn-origem" onclick="conectarPasta('ORIGEM')">📥 Origem</button>
@@ -355,9 +445,12 @@
 
                 <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">4. VALIDAÇÃO</span>
                 <button id="btn-conn-SOLUS" class="btn-conn conn-solus" onclick="conectarPasta('SOLUS')" title="Pasta onde fica o relatório diário do sistema Solus (NF, Prestador, CNPJ, Vencimento, Valor)">💰 Relatório Solus</button>
+            
             </div>
-        </div>
     </div>
+
+    <!-- CAPÍTULO 4 — Os documentos -->
+    <div class="cap-rotulo"><span>4</span> Os documentos <small id="cap-docs-sub"></small></div>
 
     <div id="modal-dashboard" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:5000; padding:0;">
         <div style="position:absolute; top:0; right:0; left:0; bottom:0; background:white; display:flex; flex-direction:column;">
@@ -368,7 +461,6 @@
         </div>
     </div>
 
-    <!-- (Botões de aba movidos para dentro da toolbar, ao lado de "Excluir Selecionados") -->
 
     <div id="painel-lancamentos" class="table-shell">
         <table>
@@ -450,8 +542,9 @@
 </div>
 
 <footer class="footer">
-    Desenvolvido por <strong>Manoel Santana</strong> | Auditoria Equipe (v19.0 — revisão de conferências)
+    Desenvolvido por <strong>Manoel Santana</strong> | Unimed Vale do Sepotuba · Suprimentos (v19.1)
 </footer>
+</div><!-- /main -->
 
 <script>
     // Configurações do Sistema
@@ -483,11 +576,13 @@
         fr.readAsDataURL(arq);
         input.value = '';
     }
+    // "🔍 Localizar Pendências" -> ícone + <span class="sb-txt"> (o texto some com o menu recolhido)
+    function rotuloSb(t) { const m = String(t).match(/^(\S+)\s+(.*)$/); return m ? `${m[1]} <span class="sb-txt">${m[2]}</span>` : t; }
     let abaAtualPrincipal = 'lancamentos';
+    // Menu lateral: recolhe para só os ícones (lembrado por computador)
     function alternarToolbar(forcar) {
-        const tb = document.getElementById('toolbar-principal'); if (!tb) return;
-        const rec = typeof forcar === 'boolean' ? forcar : !tb.classList.contains('recolhida');
-        tb.classList.toggle('recolhida', rec);
+        const rec = typeof forcar === 'boolean' ? forcar : !document.body.classList.contains('sb-recolhida');
+        document.body.classList.toggle('sb-recolhida', rec);
         try { localStorage.setItem('monitor_toolbar_recolhida', rec ? '1' : '0'); } catch (e) {}
     }
     function imprimirAbaAtual() {
@@ -2620,8 +2715,8 @@
         modoPendentesGlobais = !modoPendentesGlobais;
         const btn = document.getElementById('btn-pendentes');
         const calendario = document.getElementById('data-historico');
-        btn.innerHTML = modoPendentesGlobais ? "📅 Voltar ao Calendário" : "🔍 Localizar Pendências";
-        btn.style.backgroundColor = modoPendentesGlobais ? "#fff3e0" : "var(--white)";
+        btn.innerHTML = rotuloSb(modoPendentesGlobais ? "📅 Voltar ao Calendário" : "🔍 Localizar Pendências");
+        btn.classList.toggle('ativo-pend', modoPendentesGlobais);
         calendario.disabled = modoPendentesGlobais;
         calendario.style.opacity = modoPendentesGlobais ? "0.5" : "1";
         atualizarTela();
@@ -2633,15 +2728,15 @@
             try {
                 if (podeVarrerPendencias()) {
                     // Sentinela: busca + pastas antigas + conciliação. Se a automática já rodou há menos de 10 min, só recarrega.
-                    if (_varreduraAuto.emAndamento || Date.now() - _varreduraAuto.ultima < 600000) { btn.innerHTML = "⏳ Buscando pendências..."; await carregarPendenciasGlobais(); }
-                    else await executarVarreduraPendencias('manual', t => { btn.innerHTML = t; });
+                    if (_varreduraAuto.emAndamento || Date.now() - _varreduraAuto.ultima < 600000) { btn.innerHTML = rotuloSb("⏳ Buscando pendências..."); await carregarPendenciasGlobais(); }
+                    else await executarVarreduraPendencias('manual', t => { btn.innerHTML = rotuloSb(t); });
                 } else {
-                    btn.innerHTML = "⏳ Buscando pendências...";
+                    btn.innerHTML = rotuloSb("⏳ Buscando pendências...");
                     await carregarPendenciasGlobais(); // computador só de consulta: lista o que está na planilha
                 }
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = modoPendentesGlobais ? "📅 Voltar ao Calendário" : "🔍 Localizar Pendências";
+                btn.innerHTML = rotuloSb(modoPendentesGlobais ? "📅 Voltar ao Calendário" : "🔍 Localizar Pendências");
             }
             atualizarTela();
         }
@@ -4376,7 +4471,7 @@
     function toggleConexoes(forcarAberto) {
         conexoesVisiveis = forcarAberto === true ? true : !conexoesVisiveis;
         document.getElementById('conexao-bar-wrapper').style.display = conexoesVisiveis ? 'block' : 'none';
-        document.getElementById('btn-toggle-conexoes').innerHTML = conexoesVisiveis ? '🔼 Ocultar Conexões' : '🔌 Conexões';
+        document.getElementById('btn-toggle-conexoes').innerHTML = rotuloSb(conexoesVisiveis ? '🔼 Ocultar Conexões' : '🔌 Conexões');
     }
 
     function atualizarResumoConexoes() {
@@ -5222,6 +5317,7 @@
         const badge = document.getElementById('badge-solus-alertas');
         if (badge) badge.innerText = alertas;
         atualizarTabelaSolus();
+        try { contarHistoria(); } catch (e) {}
     }
 
     function atualizarTabelaSolus() {
@@ -5270,11 +5366,10 @@
         for (let key in paineis) {
             const ativo = key === nome;
             paineis[key].style.display = ativo ? 'block' : 'none';
-            botoes[key].style.background = ativo ? cores[key] : 'transparent';
-            botoes[key].style.color = ativo ? 'white' : cores[key];
-            botoes[key].style.borderColor = cores[key];
-            if (ativo) botoes[key].classList.remove('btn-outline'); else botoes[key].classList.add('btn-outline');
+            botoes[key].classList.toggle('ativo', ativo);
         }
+        const sub = document.getElementById('cap-docs-sub');
+        if (sub) sub.innerText = { lancamentos: '· lançamentos', asten: '· relatório Asten × Origem', solus: '· conferência com o Solus' }[nome] || '';
 
         if (nome === 'asten') atualizarTabelaAsten();
         if (nome === 'solus') atualizarTabelaSolus();
@@ -5973,6 +6068,7 @@
         let contagemEquipe = { "DANIELA": 0, "NATALIA": 0, "QUELITA": 0, "TEREZINHA": 0,"CRISTINA": 0,"ANANDA": 0,"MANOEL": 0 };
         let semResp = 0;
         let comErro = 0;
+        let parados = 0; // em aberto há 1 dia útil ou mais
 
         const dataFiltro = getDataSelecionada();
         const chavesFiltradas = getChavesFiltradas();
@@ -6025,6 +6121,7 @@
                 if (tempoParado > IDLE_LIMIT_MS) {
                     classeLinha = "row-idle";
                     const virouDia = tempoParado >= MS_DIA_UTIL;
+                    if (virouDia) parados++;
                     blocoSLA = `<div class="sla-box sla-idle" ${virouDia ? 'style="color:#c62828; border-color:#c62828;"' : ''} title="Gargalo detectado${r.ts_colab ? '' : ' (contado desde a entrada)'}${virouDia ? ' — passou de 1 dia útil' : ''}">${virouDia ? '⛔' : '⚠️'} Parado há ${formatarTempoSLA(tempoParado)}</div>`;
                 } else {
                     blocoSLA = `<div class="sla-box" style="color:#64748b">⏳ Em progresso</div>`;
@@ -6085,6 +6182,44 @@
 
         atualizarVisualFiltros();
         try { renderPainelPendencias(); } catch (e) { console.warn('Painel de pendências:', e); }
+        try { contarHistoria({ tot, ok, p, semResp, parados, comErro }); } catch (e) { console.warn('Resumo do dia:', e); }
+    }
+
+    // ===== STORYTELLING DO TOPO: contexto (o dia) → situação (o que está em aberto) → próximo passo =====
+    let _ultHist = null;
+    function contarHistoria(c) {
+        if (c) _ultHist = c; else c = _ultHist; if (!c) return;
+        const cap = document.getElementById('historia-cap'), fr = document.getElementById('historia-frase'), ac = document.getElementById('historia-acoes');
+        if (!cap || !fr || !ac) return;
+        const barra = document.getElementById('barra-perc'); if (barra) barra.style.width = (c.tot ? Math.round(c.ok / c.tot * 100) : 0) + '%';
+        const iso = document.getElementById('data-historico').value || getHojeISO();
+        const dBr = isoParaBr(iso).slice(0, 5);
+        const semana = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][new Date(iso + 'T12:00:00').getDay()];
+        cap.innerText = modoPendentesGlobais ? 'Pendências de todas as datas' : (iso === getHojeISO() ? `Hoje · ${semana}, ${dBr}` : `Histórico · ${semana}, ${dBr}`);
+        const pl = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+        const astenPend = +(document.getElementById('v-asten-pendentes') || {}).innerText || 0;
+        const solusAl = +(document.getElementById('badge-solus-alertas') || {}).innerText || 0;
+        let txt;
+        if (!c.tot) txt = modoPendentesGlobais ? '🎉 Nenhuma pendência em aberto. Tudo o que chegou já foi lançado.' : 'Ainda não chegou nenhum documento nesta data.';
+        else if (modoPendentesGlobais) txt = `<b>${pl(c.p, 'documento está', 'documentos estão')}</b> em aberto em todas as datas${c.parados ? `, <b class="h-alerta">${c.parados} há mais de 1 dia útil</b>` : ''}.`;
+        else {
+            const perc = Math.round(c.ok / c.tot * 100);
+            txt = `<b>${pl(c.tot, 'documento chegou', 'documentos chegaram')}</b>. ${c.ok ? `<b class="h-ok">${c.ok} já ${c.ok === 1 ? 'foi lançado' : 'foram lançados'}</b> (${perc}%)` : 'Nenhum foi lançado ainda'}`
+                + (c.p ? ` e <b class="h-pend">${c.p} ${c.p === 1 ? 'segue' : 'seguem'} em aberto</b>${c.parados ? `, ${c.parados} ${c.parados === 1 ? 'parado' : 'parados'} há mais de 1 dia útil` : ''}.` : ' — tudo lançado. 🎉');
+        }
+        const extras = [];
+        if (c.semResp) extras.push(`${pl(c.semResp, 'item', 'itens')} sem responsável`);
+        if (astenPend) extras.push(`${pl(astenPend, 'nota do Asten', 'notas do Asten')} ainda não ${astenPend === 1 ? 'baixada' : 'baixadas'}`);
+        if (solusAl) extras.push(`${pl(solusAl, 'alerta', 'alertas')} na conferência Solus`);
+        if (c.comErro) extras.push(`${pl(c.comErro, 'arquivo', 'arquivos')} com erro de leitura`);
+        if (extras.length) txt += ` <span class="h-atencao">Atenção: ${extras.join(' · ')}.</span>`;
+        fr.innerHTML = txt;
+        const bt = [];
+        if (c.semResp) bt.push(`<button class="hero-bt" onclick="aplicarFiltroCaixa('resp','-')">⚠ Atribuir responsável</button>`);
+        if (astenPend) bt.push(`<button class="hero-bt" onclick="mostrarAba('asten')">⏳ Ver Asten</button>`);
+        if (solusAl) bt.push(`<button class="hero-bt" onclick="mostrarAba('solus')">💰 Ver alertas Solus</button>`);
+        if (c.p && !modoPendentesGlobais) bt.push(`<button class="hero-bt hero-bt-sec" onclick="aplicarFiltroCaixa('status','ABERTO')">📂 Ver em aberto</button>`);
+        ac.innerHTML = bt.join('');
     }
 
     // CSV com campos entre aspas (antes um ";" no nome do arquivo deslocava todas as colunas) e com as
