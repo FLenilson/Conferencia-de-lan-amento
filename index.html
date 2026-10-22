@@ -643,9 +643,9 @@
     let filtroBusca = [];      // termos já normalizados (sem acento, minúsculos)
     const normBusca = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     function buscaTodasDatas() { const c = document.getElementById('busca-todas'); return !!(filtroBusca.length && c && c.checked); }
-    function casaBusca(n) {
+    function casaBusca(n, rr) {
         if (!filtroBusca.length) return true;
-        const r = db[n] || {};
+        const r = rr || db[n] || {};
         const txt = normBusca([n, r.resp, r.fornecedor, r.f, r.d_entrada || r.d].join(' '));
         const dig = String(n).replace(/\D/g, '') + ' ' + String(r.cnpj || '').replace(/\D/g, '') + ' ' + String(r.nf || '').replace(/\D/g, '');
         return filtroBusca.every(t => {
@@ -653,6 +653,34 @@
             const td = t.replace(/[.\/\-\s]/g, '');
             return /^\d+$/.test(td) && td.length >= 2 && dig.includes(td);
         });
+    }
+    // "Todas as datas": além do histórico deste navegador, procura na planilha (todas as datas registradas)
+    const _buscaRemota = { q: '', em: 0, carregando: false, achados: 0, erro: '' };
+    async function buscarNaPlanilha(textoOriginal) {
+        if (!GS_CONFIG.ativo || !GS_CONFIG.webAppUrl) return false;
+        const q = normBusca(textoOriginal).trim(); if (!q) return false;
+        if (_buscaRemota.q === q && Date.now() - _buscaRemota.em < 120000) return false;
+        Object.assign(_buscaRemota, { q, em: Date.now(), carregando: true, erro: '' }); atualizarTela();
+        try {
+            const r = await fetch(`${GS_CONFIG.webAppUrl}?token=${encodeURIComponent(GS_CONFIG.token)}&fonte=buscar&q=${encodeURIComponent(q)}`);
+            const j = await r.json();
+            if (!j.ok) throw new Error(j.erro || 'erro na planilha');
+            let novos = 0;
+            (j.registros || []).forEach(reg => {
+                if (!reg.arquivo || db[reg.arquivo] || reg.apagado || !arquivoValido(reg.arquivo)) return; // o que já existe aqui vale mais
+                // Apps Script antigo ignora "buscar" e devolve tudo: só entra o que casa com o que foi digitado
+                if (!casaBusca(reg.arquivo, { resp: reg.responsavel, f: reg.fluxo, d: reg.data, cnpj: reg.cnpj, nf: reg.nf })) return;
+                const pd = String(reg.data || '').split('/'), ph = String(normalizarHora(reg.hora) || '00:00:00').split(':');
+                const ts = pd.length === 3 ? new Date(+pd[2], +pd[1] - 1, +pd[0], +(ph[0] || 0), +(ph[1] || 0)).getTime() : null;
+                db[reg.arquivo] = { h: normalizarHora(reg.hora), d: reg.data || '', d_entrada: reg.data_entrada || reg.data || '', t: reg.tipo || 'OUTRO', resp: reg.responsavel || '-', f: reg.fluxo || '-', a: reg.status || 'AGUARDANDO',
+                    slaMinutosSalvo: reg.sla_minutos || '', ts_in: ts, nf: reg.nf || '', cnpj: reg.cnpj || '', fonteSheet: true, daBusca: true };
+                novos++;
+            });
+            _buscaRemota.achados = (j.registros || []).length;
+            if (novos) { try { await dbEngine.save(db); } catch (e) {} }
+        } catch (e) { _buscaRemota.erro = 'Não consegui consultar a planilha (' + (e && e.message || e) + ')'; }
+        _buscaRemota.carregando = false; atualizarTela();
+        return true;
     }
     let _tmBusca = null;
     function aoBuscarDoc() {
@@ -662,12 +690,15 @@
             filtroBusca = normBusca(v).split(/\s+/).filter(Boolean);
             const bt = document.getElementById('busca-limpar'); if (bt) bt.style.display = filtroBusca.length ? '' : 'none';
             atualizarTela();
+            const doRemoto = buscaTodasDatas() ? buscarNaPlanilha(v) : Promise.resolve(false);
+            doRemoto.then(() => auditarBuscaSolus()).then(atualizarTabelaSolus).catch(e => console.warn('Busca no Solus:', e));
         }, 180);
     }
     function limparBusca() {
         const i = document.getElementById('busca-doc'); if (i) i.value = '';
         filtroBusca = []; const bt = document.getElementById('busca-limpar'); if (bt) bt.style.display = 'none';
-        atualizarTela();
+        _auditBusca.chave = ''; _auditBusca.res = null;
+        atualizarTela(); atualizarTabelaSolus();
     }
     // Destaca no nome os trechos digitados (sem diferenciar acento/maiúscula)
     function realceBusca(nome) {
@@ -5379,7 +5410,7 @@
 
     function atualizarPainelSolus() {
         const chaves = obterChavesParaAuditoriaSolus();
-        _auditoriaSolusAtual = calcularAuditoriaSolus(chaves);
+        _auditoriaSolusAtual = calcularAuditoriaSolus(chaves); window._auditoriaSolusGlobal = _auditoriaSolusAtual;
         _confSolusPorArquivo = {};
         _auditoriaSolusAtual.forEach(it => { if (it.arquivo && db[it.arquivo]) _confSolusPorArquivo[it.arquivo] = it; });
         const assinatura = _auditoriaSolusAtual.map(i => i.arquivo + ':' + i.status + ':' + (i.divergencias || []).length).join('|') + '#' + astenEsperadosAtual.size;
@@ -5391,9 +5422,62 @@
         try { contarHistoria(); } catch (e) {}
     }
 
+    // ===== CONFERÊNCIA SOLUS DOS DOCUMENTOS DA BUSCA =====
+    // Com a busca ativa, a aba Solus confere só os documentos encontrados, cada um nos relatórios Solus da
+    // SUA data (7 dias úteis antes até 3 dias úteis depois), e não nos do dia do calendário.
+    const _auditBusca = { chave: '', res: null, de: '', ate: '', faltando: [], carregando: false };
+    function somarDiasUteis(iso, n) {
+        const d = new Date(iso + 'T12:00:00'), passo = n < 0 ? -1 : 1; let k = 0, g = 0;
+        while (k < Math.abs(n) && g++ < 40) { d.setDate(d.getDate() + passo); if (ehDiaUtil(d)) k++; }
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    const brParaIso = br => { const p = String(br || '').split('/'); return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : ''; };
+    async function auditarBuscaSolus() {
+        if (!filtroBusca.length) { _auditBusca.chave = ''; _auditBusca.res = null; return; }
+        const chaves = getChavesFiltradas().slice(0, 60);
+        const chave = chaves.join('|') + '#' + (solusRegistrosAtual || []).length;
+        if (chave === _auditBusca.chave && _auditBusca.res) return;
+        _auditBusca.chave = chave; _auditBusca.carregando = true; atualizarTabelaSolus();
+        const hoje = getHojeISO(), datas = new Set();
+        chaves.forEach(n => {
+            const base = brParaIso(db[n].d) || brParaIso(db[n].d_entrada); if (!base) return;
+            const ini = somarDiasUteis(base, -7), fim = somarDiasUteis(base, 3);
+            for (let d = ini, g = 0; d <= fim && d <= hoje && g < 20; d = somarDiasUteis(d, 1), g++) datas.add(d);
+            if (brParaIso(db[n].d_entrada) && brParaIso(db[n].d_entrada) !== base) datas.add(brParaIso(db[n].d_entrada));
+        });
+        const lista = [...datas].sort().slice(-45), regs = [], faltando = [];
+        const selIso = document.getElementById('data-historico').value || hoje;
+        await Promise.all(lista.map(async iso => {
+            let rr = [];
+            if (iso === selIso && (solusRegistrosAtual || []).length) rr = solusRegistrosAtual;
+            else { try { rr = await buscarSolusSnapshotRemoto(iso); } catch (e) { rr = []; } }
+            if (!rr.length) { if (ehDiaUtil(new Date(iso + 'T12:00:00'))) faltando.push(iso); return; }
+            rr.forEach(r => regs.push({ r, data: isoParaBr(iso) }));
+        }));
+        const salvoS = solusRegistrosAtual, salvoJ = _solusJanela.regs;
+        let res = [];
+        try { solusRegistrosAtual = regs.map(x => x.r); _solusJanela.regs = []; res = calcularAuditoriaSolus(chaves).filter(it => chaves.includes(it.arquivo)); }
+        finally { solusRegistrosAtual = salvoS; _solusJanela.regs = salvoJ; }
+        const de = lista[0] ? isoParaBr(lista[0]).slice(0, 5) : '', ate = lista.length ? isoParaBr(lista[lista.length - 1]).slice(0, 5) : '';
+        res.forEach(it => {
+            if (it.valor && it.prestadorSolus && it.prestadorSolus !== '-') {
+                const x = regs.find(({ r }) => Math.abs((r.valor || 0) - it.valor) < 0.01 && (r.nf === it.nf || String(r.nf || '').replace(/^0+/, '') === String(it.nf || '').replace(/^0+/, '') || r.prestador === it.prestadorSolus));
+                if (x) it.divergencias = [`Encontrado no relatório Solus de ${x.data}`].concat((it.divergencias || []).filter(d => !/^Já lançado no Solus|^Lançado no Solus em/.test(d) || it.status === 'LANCADO_SEM_MOVER'));
+            } else if (it.status === 'NAO_LANCADO' || it.status === 'PENDENTE') {
+                it.divergencias = [`Procurado nos relatórios Solus de ${de} a ${ate}: não encontrado`].concat(it.divergencias || []);
+            }
+            if (it.status === 'AGUARDANDO_SOLUS' && regs.length) it.status = 'NAO_LANCADO';
+        });
+        Object.assign(_auditBusca, { res, de, ate, faltando: faltando.sort(), carregando: false });
+        atualizarTabelaSolus();
+    }
     function atualizarTabelaSolus() {
         const corpo = document.getElementById('tabela-solus-corpo');
         if (!corpo) return;
+        const buscando = filtroBusca.length > 0;
+        const _auditoriaSolusAtual = buscando ? (_auditBusca.res || []) : window._auditoriaSolusGlobal || [];
+        if (buscando && _auditBusca.carregando) { corpo.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#5B5C65;">🔎 Procurando os documentos da busca nos relatórios Solus das datas deles…</td></tr>'; return; }
+        if (buscando && !_auditoriaSolusAtual.length) { corpo.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:#5B5C65;">Nenhum documento da busca para conferir${getChavesFiltradas().length ? '' : ' — a busca não encontrou documentos (marque <b>todas as datas</b> para procurar em outros dias)'}.</td></tr>`; return; }
         if (_auditoriaSolusAtual.length === 0) {
             corpo.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:50px; color:#94a3b8; font-style: italic;">Nenhum item para conferir com o Solus ${modoPendentesGlobais ? '' : 'no dia selecionado'}.</td></tr>`;
             return;
@@ -5403,9 +5487,10 @@
         _auditoriaSolusAtual.forEach(i => cont[i.status] = (cont[i.status] || 0) + 1);
         const resumo = Object.keys(STATUS_SOLUS).filter(k => cont[k]).map(k => `<span class="badge ${STATUS_SOLUS[k].classe}" style="width:auto; max-width:none; margin:2px;">${STATUS_SOLUS[k].label}: ${cont[k]}</span>`).join('');
         let avisos = `<tr><td colspan="5" style="padding:8px 12px; background:#F7FBF9;">${resumo}</td></tr>`;
-        if (!conexoes["SOLUS"] && !solusFonteRemota) avisos += `<tr><td colspan="5" style="text-align:center; padding:8px; color:#F47920; font-size:0.75rem; font-weight:700;">⏳ Relatório Solus da data não encontrado (pasta não conectada e sem retrato na planilha) — itens lançados aparecem como "Aguardando relatório".</td></tr>`;
+        if (buscando) avisos += `<tr><td colspan="5" style="padding:8px 12px; font-size:0.75rem; background:#EFE9F5; color:#411564;">🔎 <b>Conferindo os documentos da busca</b> nos relatórios Solus das datas deles (${esc(_auditBusca.de)} a ${esc(_auditBusca.ate)}), não só do dia do calendário.${_auditBusca.faltando.length ? ` <span style="color:#9A4300; font-weight:700;">Sem relatório Solus na planilha de: ${_auditBusca.faltando.map(i => isoParaBr(i).slice(0, 5)).join(', ')}.</span>` : ''}</td></tr>`;
+        if (buscando) {} else if (!conexoes["SOLUS"] && !solusFonteRemota) avisos += `<tr><td colspan="5" style="text-align:center; padding:8px; color:#F47920; font-size:0.75rem; font-weight:700;">⏳ Relatório Solus da data não encontrado (pasta não conectada e sem retrato na planilha) — itens lançados aparecem como "Aguardando relatório".</td></tr>`;
         else if (solusFonteRemota) avisos += `<tr><td colspan="5" style="text-align:center; padding:8px; color:#8a6d00; font-size:0.75rem; font-style:italic;">📡 Dados do Solus sincronizados da planilha (pasta Solus não conectada nesta máquina)</td></tr>`;
-        const rels = (!solusFonteRemota && _solusCache && _solusCache.relatorios) || [];
+        const rels = (!buscando && !solusFonteRemota && _solusCache && _solusCache.relatorios) || [];
         if (rels.length) {
             const dif = rels.length > 1 && rels.some(r => r.qtd !== rels[0].qtd);
             avisos += `<tr><td colspan="5" style="padding:8px 12px; font-size:0.75rem; ${dif ? 'background:#FFF4E5; color:#9A4300; font-weight:700;' : 'color:#5B5C65;'}">${dif ? '⚠️ Relatórios do mesmo dia com quantidades diferentes — conferindo pela união: ' : '📄 Relatório lido: '}${rels.map(r => `${esc(r.nome)} (${r.qtd} lançamentos)`).join(' × ')}${dif ? '. O relatório menor provavelmente foi tirado antes do fim do dia.' : ''}${(solusRegistrosAtual || []).some(r => r.fontePdf) ? ' · <span style="font-weight:400;">Relatório sem CNPJ: conferência feita por NF + valor + fornecedor.</span>' : ''}</td></tr>`;
@@ -5443,7 +5528,7 @@
         if (sub) sub.innerText = { lancamentos: '· lançamentos', asten: '· relatório Asten × Origem', solus: '· conferência com o Solus' }[nome] || '';
 
         if (nome === 'asten') atualizarTabelaAsten();
-        if (nome === 'solus') atualizarTabelaSolus();
+        if (nome === 'solus') { atualizarTabelaSolus(); if (filtroBusca.length) auditarBuscaSolus().catch(() => {}); }
     }
 
     // --- MOTOR DE PROCESSAMENTO OTIMIZADO ---
@@ -6223,7 +6308,7 @@
         });
 
         const elRes = document.getElementById('busca-res');
-        if (elRes) elRes.innerHTML = filtroBusca.length ? `<b>${tot}</b> ${tot === 1 ? 'documento encontrado' : 'documentos encontrados'}${buscaTodasDatas() ? ' em todas as datas' : (modoPendentesGlobais ? ' nas pendências' : ' em ' + esc(dataFiltro))}` : '';
+        if (elRes) elRes.innerHTML = filtroBusca.length ? (buscaTodasDatas() && _buscaRemota.carregando ? '⏳ procurando também na planilha… ' : '') + `<b>${tot}</b> ${tot === 1 ? 'documento encontrado' : 'documentos encontrados'}${buscaTodasDatas() ? ' em todas as datas' : (modoPendentesGlobais ? ' nas pendências' : ' em ' + esc(dataFiltro))}` + (buscaTodasDatas() && _buscaRemota.erro ? ` <span style="color:#C62828;">· ${esc(_buscaRemota.erro)}</span>` : '') : '';
         if (tot === 0 && filtroBusca.length) {
             corpo.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px; color:#5B5C65;">Nenhum documento com “${esc((document.getElementById('busca-doc') || {}).value || '')}”${buscaTodasDatas() ? '' : ' nesta data. Marque <b>todas as datas</b> para procurar nos outros dias'}.</td></tr>`;
         } else if (tot === 0) {
